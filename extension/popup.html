@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>I Have 2 Much Tabs</title>
+    <style>
+      body { font-family: sans-serif; margin: 12px; width: 360px; }
+      button, input { width: 100%; margin-top: 8px; padding: 8px; }
+      .status { font-size: 12px; color: #444; white-space: pre-wrap; margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <h1 style="font-size:16px; margin:0;">I Have 2 Much Tabs</h1>
+    <button id="scanBtn">Start Scan</button>
+    <button id="statsBtn">Refresh Stats</button>
+    <input id="questionInput" placeholder="Ask your bookmark archive..." />
+    <button id="askBtn">Ask</button>
+    <div class="status" id="statusBox">Idle</div>
+    <script type="module" src="./dist/popup/index.js"></script>
+  </body>
+  </html>
+

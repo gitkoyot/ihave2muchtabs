@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard - I Have 2 Much Tabs</title>
+    <style>
+      body { font-family: sans-serif; margin: 20px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+      th, td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
+      .muted { color: #666; font-size: 12px; }
+      input { width: 320px; padding: 8px; }
+      button { padding: 8px 10px; }
+    </style>
+  </head>
+  <body>
+    <h1>Bookmark Knowledge Dashboard</h1>
+    <div>
+      <input id="searchInput" placeholder="Search by URL, title, tag..." />
+      <button id="refreshBtn">Refresh</button>
+      <button id="exportBtn">Export JSONL</button>
+    </div>
+    <p class="muted" id="statsLine">Loading...</p>
+    <table>
+      <thead>
+        <tr><th>Status</th><th>Bookmark</th><th>Summary</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <script type="module" src="./dist/dashboard/index.js"></script>
+  </body>
+  </html>
+

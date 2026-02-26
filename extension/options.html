@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Options - I Have 2 Much Tabs</title>
+    <style>
+      body { font-family: sans-serif; margin: 20px; max-width: 800px; }
+      label { display: block; margin-top: 12px; font-weight: 600; }
+      input { width: 100%; padding: 8px; margin-top: 6px; }
+      .small { color: #555; font-size: 12px; margin-top: 10px; display: block; }
+    </style>
+  </head>
+  <body>
+    <h1>Options</h1>
+    <span class="small">Plugin-only MVP stores Azure OpenAI credentials locally in Chrome storage.</span>
+
+    <label for="endpoint">Azure OpenAI Endpoint</label>
+    <input id="endpoint" type="text" />
+    <label for="apiKey">API Key</label>
+    <input id="apiKey" type="password" />
+    <label for="chatDeployment">Chat Deployment Name</label>
+    <input id="chatDeployment" type="text" />
+    <label for="embeddingDeployment">Embeddings Deployment Name</label>
+    <input id="embeddingDeployment" type="text" />
+    <label for="apiVersion">API Version</label>
+    <input id="apiVersion" type="text" />
+    <label for="maxCharsPerPage">Max Chars Per Page</label>
+    <input id="maxCharsPerPage" type="number" />
+    <label for="maxConcurrency">Max Concurrency</label>
+    <input id="maxConcurrency" type="number" />
+    <button id="saveBtn" style="margin-top:16px;">Save Settings</button>
+    <span id="result" class="small"></span>
+    <script type="module" src="./dist/options/index.js"></script>
+  </body>
+  </html>
+
