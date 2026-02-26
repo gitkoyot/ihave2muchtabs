@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "I Have 2 Much Tabs",
-  "version": "0.1.6",
+  "version": "0.1.8",
   "description": "Archive open tab knowledge with AI summaries and semantic search.",
   "permissions": ["tabs", "storage", "downloads"],
   "host_permissions": ["http://*/*", "https://*/*"],

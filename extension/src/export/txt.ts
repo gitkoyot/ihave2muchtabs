@@ -58,6 +58,9 @@ export function buildLlmFriendlyTxtExport(
     lines.push("Tags:");
     lines.push(safeList(analysis.tags, 100));
     lines.push("");
+    lines.push("Technologies:");
+    lines.push(safeList(analysis.technologies ?? [], 100));
+    lines.push("");
     lines.push("Extracted Links (first 50):");
     lines.push(safeList(analysis.extractedLinks ?? [], 50));
     lines.push("");

@@ -36,6 +36,7 @@ export interface PageAnalysis {
   whyRelevantEn: string;
   tags: string[];
   topics: string[];
+  technologies: string[];
   extractedLinks: string[];
   embedding: number[];
   modelChat: string;
@@ -63,6 +64,7 @@ export interface SummaryResult {
   why_relevant: string;
   tags: string[];
   topics: string[];
+  technologies: string[];
   confidence: number;
 }
 

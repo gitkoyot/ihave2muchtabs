@@ -1,7 +1,7 @@
 import type { PageAnalysis, TabRecord } from "../types/models";
 
 const DB_NAME = "iHave2MuchTabsDb";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -42,6 +42,7 @@ export async function openDb(): Promise<IDBDatabase> {
         store.createIndex("by_fetch_status", "fetchStatus");
         store.createIndex("by_tags", "tags", { multiEntry: true });
         store.createIndex("by_topics", "topics", { multiEntry: true });
+        store.createIndex("by_technologies", "technologies", { multiEntry: true });
       }
 
       if (!db.objectStoreNames.contains("processing_jobs")) {
@@ -53,6 +54,13 @@ export async function openDb(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains("query_history")) {
         const store = db.createObjectStore("query_history", { keyPath: "id" });
         store.createIndex("by_created_at", "createdAt");
+      }
+
+      if (oldVersion < 3 && db.objectStoreNames.contains("page_analyses") && tx) {
+        const analysesStore = tx.objectStore("page_analyses");
+        if (!analysesStore.indexNames.contains("by_technologies")) {
+          analysesStore.createIndex("by_technologies", "technologies", { multiEntry: true });
+        }
       }
 
       // v1 -> v2 migration: move bookmark_records into tab_records with renamed fields.

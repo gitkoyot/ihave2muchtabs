@@ -23,6 +23,7 @@ export interface ExportRow {
     why_relevant_en: string;
     tags: string[];
     topics: string[];
+    technologies: string[];
     extracted_links: string[];
     embedding: number[];
     model_chat: string;
@@ -62,6 +63,7 @@ export function toExportRow(
       why_relevant_en: analysis.whyRelevantEn,
       tags: analysis.tags,
       topics: analysis.topics,
+      technologies: analysis.technologies ?? [],
       extracted_links: analysis.extractedLinks ?? [],
       embedding: analysis.embedding,
       model_chat: analysis.modelChat,

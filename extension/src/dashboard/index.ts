@@ -41,6 +41,7 @@ async function renderRows(): Promise<void> {
     ].join("\n");
     const detailedSummary = row.analysis?.summaryDetailedEn ?? row.analysis?.summaryShortEn ?? "";
     const linksPreview = (row.analysis?.extractedLinks ?? []).slice(0, 5);
+    const technologiesPreview = (row.analysis?.technologies ?? []).slice(0, 15);
     tr.innerHTML = `
       <td><span class="badge status-${escapeHtml(row.tab.processingStatus)}">${escapeHtml(row.tab.processingStatus)}</span></td>
       <td>
@@ -50,6 +51,7 @@ async function renderRows(): Promise<void> {
       </td>
       <td>
         <div>${escapeHtml(detailedSummary)}</div>
+        <div class="muted" style="margin-top:6px;"><strong>Technologies:</strong> ${escapeHtml(technologiesPreview.join(", ") || "none")}</div>
         <div class="muted" style="margin-top:6px;">${escapeHtml(linksPreview.join("\n"))}</div>
       </td>
       <td><pre style="margin:0; white-space:pre-wrap;">${escapeHtml(diagnostics)}</pre></td>

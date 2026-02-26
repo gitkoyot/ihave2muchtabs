@@ -279,6 +279,7 @@ async function processBookmarkRecord(
       recordId: record.id,
       tags: summary.result.tags,
       topics: summary.result.topics,
+      technologies: summary.result.technologies,
       tokenUsageIn: summary.tokenUsageIn,
       tokenUsageOut: summary.tokenUsageOut
     });
@@ -311,6 +312,7 @@ async function processBookmarkRecord(
       whyRelevantEn: summary.result.why_relevant,
       tags: summary.result.tags,
       topics: summary.result.topics,
+      technologies: summary.result.technologies,
       extractedLinks: extracted.links,
       embedding,
       modelChat: settings.chatDeployment,
@@ -397,7 +399,8 @@ async function handleAskQuery(question: string): Promise<RuntimeResponse> {
       summary_detailed_en: analysis.summaryDetailedEn,
       why_relevant_en: analysis.whyRelevantEn,
       tags: analysis.tags,
-      topics: analysis.topics
+      topics: analysis.topics,
+      technologies: analysis.technologies
     };
   });
 

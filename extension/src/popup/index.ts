@@ -75,22 +75,25 @@ async function startScan(): Promise<void> {
 
 async function askQuestion(): Promise<void> {
   const input = byId<HTMLInputElement>("questionInput");
-  const box = byId<HTMLDivElement>("statusBox");
+  const statusBox = byId<HTMLDivElement>("statusBox");
+  const answerBox = byId<HTMLDivElement>("answerBox");
   const question = input.value.trim();
   if (!question) {
-    box.textContent = "Enter a question first.";
+    answerBox.textContent = "Enter a question first.";
     return;
   }
+  statusBox.textContent = "Running ASK query...";
   const res = await sendRuntimeMessage({ type: "ASK_QUERY", payload: { question } });
   if (!res.ok) {
-    box.textContent = `Error: ${res.error}`;
+    answerBox.textContent = `Error: ${res.error}`;
     return;
   }
   if (res.type !== "ASK_RESULT") {
-    box.textContent = `Unexpected response: ${res.type}`;
+    answerBox.textContent = `Unexpected response: ${res.type}`;
     return;
   }
-  box.textContent = formatAskResult(res.payload);
+  answerBox.textContent = formatAskResult(res.payload);
+  await refreshStatus();
 }
 
 async function closeAnalyzedTabs(): Promise<void> {

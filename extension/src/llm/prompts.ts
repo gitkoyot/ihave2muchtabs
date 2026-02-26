@@ -29,11 +29,12 @@ ${input.contentText}
 
 Return JSON with this exact shape:
 {
-  "summary_short": "3-5 sentences",
-  "summary_detailed": "6-12 sentences with specific details, concepts, and practical takeaways",
+  "summary_short": "4-6 sentences",
+  "summary_detailed": "10-16 sentences with concrete details, architecture-level context, key ideas, and practical takeaways",
   "why_relevant": "1 sentence describing why someone might have bookmarked this page",
   "tags": ["tag1", "tag2", "tag3"],
   "topics": ["topic1", "topic2"],
+  "technologies": ["framework/library/language/tool names explicitly mentioned in the page content"],
   "confidence": 0.0
 }
 
@@ -41,6 +42,8 @@ Rules:
 - Be concrete and specific.
 - Mention key terms, frameworks, APIs, and concepts explicitly.
 - Avoid generic wording.
+- technologies must include only technologies actually present in the text.
+- technologies should include languages, frameworks, libraries, databases, cloud/platform tools, and protocols when present.
 `;
 }
 

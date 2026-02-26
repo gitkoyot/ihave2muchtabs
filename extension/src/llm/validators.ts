@@ -26,6 +26,7 @@ export function parseSummaryResultJson(content: string): SummaryResult {
   const why_relevant = obj.why_relevant;
   const tags = obj.tags;
   const topics = obj.topics;
+  const technologies = obj.technologies;
   const confidence = obj.confidence;
 
   if (!isString(summary_short)) throw new Error("Invalid summary_short");
@@ -33,6 +34,7 @@ export function parseSummaryResultJson(content: string): SummaryResult {
   if (!isString(why_relevant)) throw new Error("Invalid why_relevant");
   if (!isStringArray(tags)) throw new Error("Invalid tags");
   if (!isStringArray(topics)) throw new Error("Invalid topics");
+  if (!isStringArray(technologies)) throw new Error("Invalid technologies");
   if (!isNumber(confidence)) throw new Error("Invalid confidence");
 
   return {
@@ -41,6 +43,7 @@ export function parseSummaryResultJson(content: string): SummaryResult {
     why_relevant,
     tags,
     topics,
+    technologies,
     confidence
   };
 }
