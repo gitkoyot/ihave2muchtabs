@@ -13,6 +13,7 @@ export interface ExportRow {
     captured_at: number;
   };
   analysis: {
+    document_id: string;
     page_title: string;
     final_url: string;
     http_status: number | null;
@@ -53,6 +54,7 @@ export function toExportRow(
       captured_at: tab.capturedAt
     },
     analysis: {
+      document_id: analysis.documentId,
       page_title: analysis.pageTitle,
       final_url: analysis.finalUrl,
       http_status: analysis.httpStatus,

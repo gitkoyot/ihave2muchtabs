@@ -26,6 +26,7 @@ export interface TabRecord {
 export interface PageAnalysis {
   id: string;
   recordId: string;
+  documentId: string;
   pageTitle: string;
   finalUrl: string;
   httpStatus: number | null;
@@ -45,6 +46,22 @@ export interface PageAnalysis {
   tokenUsageIn: number | null;
   tokenUsageOut: number | null;
   analysisVersion: number;
+  createdAt: number;
+}
+
+export interface PageDocument {
+  id: string;
+  canonicalUrl: string;
+  domain: string;
+  contentHash: string | null;
+  firstSeenAt: number;
+  lastSeenAt: number;
+}
+
+export interface PageLink {
+  id: string;
+  documentId: string;
+  toUrl: string;
   createdAt: number;
 }
 

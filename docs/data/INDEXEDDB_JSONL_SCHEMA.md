@@ -3,7 +3,7 @@
 ## Purpose
 
 Define the local storage model (IndexedDB) and export format (`JSONL`) for the plugin-only MVP.
-Current MVP captures open tabs (not bookmarks). Some store/model names retain `bookmark_*` for compatibility during early iterations.
+Current schema is open-tabs-first and uses dedicated domain stores.
 
 ## Design Principles
 
@@ -14,12 +14,12 @@ Current MVP captures open tabs (not bookmarks). Some store/model names retain `b
 
 ## IndexedDB Database
 
-- Name: `iHave2MuchTabsDb`
+- Name: `iHave2MuchTabsKnowledgeDb`
 - Version: `1`
 
 ## Object Stores
 
-### `bookmark_records`
+### `tab_captures`
 
 Fields:
 
@@ -41,12 +41,30 @@ Indexes:
 - `by_folder`
 - `by_updated_at`
 
+### `page_documents`
+
+Fields:
+
+- `id`
+- `canonicalUrl`
+- `domain`
+- `contentHash`
+- `firstSeenAt`
+- `lastSeenAt`
+
+Indexes:
+
+- `by_canonical_url` (unique)
+- `by_domain`
+- `by_last_seen_at`
+
 ### `page_analyses`
 
 Fields:
 
 - `id`
 - `recordId`
+- `documentId`
 - `pageTitle`
 - `finalUrl`
 - `httpStatus`
@@ -74,6 +92,7 @@ Indexes:
 - `by_topics` (multiEntry)
 
 ### `processing_jobs`
+Store name in current schema: `scan_jobs`.
 
 Fields:
 

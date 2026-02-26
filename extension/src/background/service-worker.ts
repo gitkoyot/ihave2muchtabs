@@ -13,6 +13,8 @@ import {
   listKnowledgeRows,
   listPageAnalyses,
   listTabRecords,
+  savePageDocument,
+  savePageLinks,
   saveTabRecord,
   saveTabRecords,
   savePageAnalysis
@@ -38,13 +40,15 @@ chrome.runtime.onMessage.addListener(
   ) => {
   void handleMessage(message)
     .then((res) => sendResponse(res))
-    .catch((error: unknown) =>
+    .catch(async (error: unknown) => {
+      const details = error instanceof Error ? error.message : String(error);
+      await logError("sw.message", "Unhandled background error", { details, messageType: message.type });
       sendResponse({
         ok: false,
         error: "Unhandled background error",
-        details: error instanceof Error ? error.message : String(error)
-      } satisfies RuntimeResponse)
-    );
+        details
+      } satisfies RuntimeResponse);
+    });
   return true;
   }
 );
@@ -98,31 +102,41 @@ async function handleMessage(message: RuntimeRequest): Promise<RuntimeResponse> 
       return await handleAskQuery(message.payload.question);
 
     case "EXPORT_JSONL": {
-      const rows = await listKnowledgeRows();
-      const exportedAt = new Date().toISOString();
-      const exportRows = rows
-        .filter((row) => row.analysis && row.tab.processingStatus === "done")
-        .map((row) => toExportRow(row.tab, row.analysis!, exportedAt));
-      const jsonl = toJsonl(exportRows);
-      const blob = new Blob([jsonl], { type: "application/x-ndjson" });
-      const objectUrl = URL.createObjectURL(blob);
-      const filename = `bookmark-knowledge-export-${new Date().toISOString().replace(/[:.]/g, "-")}.jsonl`;
+      try {
+        const rows = await listKnowledgeRows();
+        const exportedAt = new Date().toISOString();
+        const exportRows = rows
+          .filter((row) => row.analysis && row.tab.processingStatus === "done")
+          .map((row) => toExportRow(row.tab, row.analysis!, exportedAt));
+        const jsonl = toJsonl(exportRows);
+        const dataUrl = `data:application/x-ndjson;charset=utf-8,${encodeURIComponent(jsonl)}`;
+        const filename = `bookmark-knowledge-export-${new Date().toISOString().replace(/[:.]/g, "-")}.jsonl`;
 
-      await chrome.downloads.download({ url: objectUrl, filename, saveAs: true });
-      await logInfo("export", "JSONL export completed", { filename, rows: exportRows.length });
-      return { ok: true, type: "EXPORT_DONE", payload: { filename } };
+        await chrome.downloads.download({ url: dataUrl, filename, saveAs: true });
+        await logInfo("export", "JSONL export completed", { filename, rows: exportRows.length });
+        return { ok: true, type: "EXPORT_DONE", payload: { filename } };
+      } catch (error) {
+        const details = error instanceof Error ? error.message : String(error);
+        await logError("export", "JSONL export failed", { details });
+        return { ok: false, error: "JSONL export failed", details };
+      }
     }
 
     case "EXPORT_TXT": {
-      const rows = await listKnowledgeRows();
-      const exportedAt = new Date().toISOString();
-      const text = buildLlmFriendlyTxtExport(rows, exportedAt);
-      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-      const objectUrl = URL.createObjectURL(blob);
-      const filename = `tab-knowledge-export-${new Date().toISOString().replace(/[:.]/g, "-")}.txt`;
-      await chrome.downloads.download({ url: objectUrl, filename, saveAs: true });
-      await logInfo("export", "TXT export completed", { filename });
-      return { ok: true, type: "EXPORT_TXT_DONE", payload: { filename } };
+      try {
+        const rows = await listKnowledgeRows();
+        const exportedAt = new Date().toISOString();
+        const text = buildLlmFriendlyTxtExport(rows, exportedAt);
+        const dataUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(text)}`;
+        const filename = `tab-knowledge-export-${new Date().toISOString().replace(/[:.]/g, "-")}.txt`;
+        await chrome.downloads.download({ url: dataUrl, filename, saveAs: true });
+        await logInfo("export", "TXT export completed", { filename });
+        return { ok: true, type: "EXPORT_TXT_DONE", payload: { filename } };
+      } catch (error) {
+        const details = error instanceof Error ? error.message : String(error);
+        await logError("export", "TXT export failed", { details });
+        return { ok: false, error: "TXT export failed", details };
+      }
     }
 
     case "GET_DEBUG_LOGS":
@@ -294,14 +308,24 @@ async function processBookmarkRecord(
     ].join("\n");
     const embedding = await generateEmbedding(settings, embeddingInput);
     const contentHash = await sha256Hex(truncatedText);
+    const documentId = (await sha256Hex(fetchResult.finalUrl)).replace("sha256:", "doc_");
     await logDebug("analysis.item", "Embedding generated", {
       recordId: record.id,
       dimensions: embedding.length
     });
 
+    await savePageDocument({
+      id: documentId,
+      canonicalUrl: fetchResult.finalUrl,
+      contentHash,
+      seenAt: Date.now()
+    });
+    await savePageLinks(documentId, extracted.links);
+
     const analysis: PageAnalysis = {
       id: makeId("analysis"),
       recordId: record.id,
+      documentId,
       pageTitle: extracted.pageTitle,
       finalUrl: fetchResult.finalUrl,
       httpStatus: fetchResult.httpStatus,

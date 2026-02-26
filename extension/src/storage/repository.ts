@@ -1,5 +1,13 @@
 import type { PageAnalysis, TabRecord } from "../types/models";
-import { clearAllDatabaseStores, getAllPageAnalyses, getAllTabRecords, putPageAnalysis, putTabRecord } from "./db";
+import {
+  clearAllDatabaseStores,
+  getAllPageAnalyses,
+  getAllTabRecords,
+  putPageAnalysis,
+  putPageDocument,
+  putTabRecord,
+  replacePageLinksForDocument
+} from "./db";
 
 export async function saveTabRecords(records: TabRecord[]): Promise<void> {
   const existing = await getAllTabRecords();
@@ -19,6 +27,27 @@ export async function saveTabRecord(record: TabRecord): Promise<void> {
 
 export async function savePageAnalysis(analysis: PageAnalysis): Promise<void> {
   await putPageAnalysis(analysis);
+}
+
+export async function savePageDocument(input: {
+  id: string;
+  canonicalUrl: string;
+  contentHash: string | null;
+  seenAt: number;
+}): Promise<void> {
+  const domain = safeDomain(input.canonicalUrl);
+  await putPageDocument({
+    id: input.id,
+    canonicalUrl: input.canonicalUrl,
+    domain,
+    contentHash: input.contentHash,
+    firstSeenAt: input.seenAt,
+    lastSeenAt: input.seenAt
+  });
+}
+
+export async function savePageLinks(documentId: string, links: string[]): Promise<void> {
+  await replacePageLinksForDocument(documentId, links);
 }
 
 export async function listKnowledgeRows(): Promise<
@@ -42,4 +71,12 @@ export async function listPageAnalyses(): Promise<PageAnalysis[]> {
 
 export async function clearKnowledgeBase(): Promise<void> {
   await clearAllDatabaseStores();
+}
+
+function safeDomain(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return "unknown";
+  }
 }
