@@ -12,9 +12,11 @@ import {
   clearKnowledgeBase,
   listKnowledgeRows,
   listPageAnalyses,
+  listQueryHistoryRecords,
   listTabRecords,
   savePageDocument,
   savePageLinks,
+  saveQueryHistoryRecord,
   saveTabRecord,
   saveTabRecords,
   savePageAnalysis
@@ -151,6 +153,9 @@ async function handleMessage(message: RuntimeRequest): Promise<RuntimeResponse> 
       runtimeStatus = "idle";
       await logWarn("db", "Knowledge base cleared by user");
       return { ok: true, type: "DATABASE_CLEARED" };
+
+    case "GET_COST_METRICS":
+      return await handleGetCostMetrics();
 
     case "CLOSE_ANALYZED_TABS":
       return await handleCloseAnalyzedTabs(message.payload?.scope ?? "all_tabs", message.payload?.windowId);
@@ -429,12 +434,25 @@ async function handleAskQuery(question: string): Promise<RuntimeResponse> {
   });
 
   const answer = await answerQuery(settings, cleanQuestion, JSON.stringify(retrievalRecords, null, 2));
-  await logInfo("ask", "ASK_QUERY answered", {
-    matched: answer.matched_urls.length,
-    related: answer.related_urls.length,
-    confidence: answer.confidence
+  await saveQueryHistoryRecord({
+    id: makeId("query"),
+    question: cleanQuestion,
+    answer: answer.result.answer,
+    matchedUrls: answer.result.matched_urls.map((u) => u.url),
+    relatedUrls: answer.result.related_urls.map((u) => u.url),
+    modelChat: settings.chatDeployment,
+    tokenUsageIn: answer.tokenUsageIn,
+    tokenUsageOut: answer.tokenUsageOut,
+    createdAt: Date.now()
   });
-  return { ok: true, type: "ASK_RESULT", payload: answer };
+  await logInfo("ask", "ASK_QUERY answered", {
+    matched: answer.result.matched_urls.length,
+    related: answer.result.related_urls.length,
+    confidence: answer.result.confidence,
+    tokenUsageIn: answer.tokenUsageIn,
+    tokenUsageOut: answer.tokenUsageOut
+  });
+  return { ok: true, type: "ASK_RESULT", payload: answer.result };
 }
 
 async function handleCloseAnalyzedTabs(
@@ -478,4 +496,44 @@ async function handleCloseAnalyzedTabs(
     type: "CLOSE_ANALYZED_TABS_DONE",
     payload: { closedCount: closableTabIds.length, candidateCount: analyzedUrls.size }
   };
+}
+
+async function handleGetCostMetrics(): Promise<RuntimeResponse> {
+  const [analyses, queries] = await Promise.all([listPageAnalyses(), listQueryHistoryRecords()]);
+
+  const scanTokenIn = analyses.reduce((sum, a) => sum + (a.tokenUsageIn ?? 0), 0);
+  const scanTokenOut = analyses.reduce((sum, a) => sum + (a.tokenUsageOut ?? 0), 0);
+  const queryTokenIn = queries.reduce((sum, q) => sum + (q.tokenUsageIn ?? 0), 0);
+  const queryTokenOut = queries.reduce((sum, q) => sum + (q.tokenUsageOut ?? 0), 0);
+
+  // Heuristic estimate only. Real billing depends on model/deployment pricing in Azure.
+  const estimatedScanUsd = estimateUsd(scanTokenIn, scanTokenOut);
+  const estimatedQueryUsd = estimateUsd(queryTokenIn, queryTokenOut);
+
+  return {
+    ok: true,
+    type: "COST_METRICS",
+    payload: {
+      scan: {
+        analyzedPages: analyses.length,
+        tokenIn: scanTokenIn,
+        tokenOut: scanTokenOut,
+        estimatedUsd: estimatedScanUsd
+      },
+      query: {
+        count: queries.length,
+        tokenIn: queryTokenIn,
+        tokenOut: queryTokenOut,
+        estimatedUsd: estimatedQueryUsd
+      }
+    }
+  };
+}
+
+function estimateUsd(tokenIn: number, tokenOut: number): number {
+  // Approximation baseline (per 1M tokens): input $5, output $15.
+  const inputPerMillion = 5;
+  const outputPerMillion = 15;
+  const usd = (tokenIn / 1_000_000) * inputPerMillion + (tokenOut / 1_000_000) * outputPerMillion;
+  return Math.round(usd * 10000) / 10000;
 }

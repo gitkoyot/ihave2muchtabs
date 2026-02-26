@@ -1,10 +1,12 @@
-import type { PageAnalysis, TabRecord } from "../types/models";
+import type { PageAnalysis, QueryHistoryRecord, TabRecord } from "../types/models";
 import {
   clearAllDatabaseStores,
+  getAllQueryHistoryRecords,
   getAllPageAnalyses,
   getAllTabRecords,
   putPageAnalysis,
   putPageDocument,
+  putQueryHistoryRecord,
   putTabRecord,
   replacePageLinksForDocument
 } from "./db";
@@ -71,6 +73,14 @@ export async function listPageAnalyses(): Promise<PageAnalysis[]> {
 
 export async function clearKnowledgeBase(): Promise<void> {
   await clearAllDatabaseStores();
+}
+
+export async function saveQueryHistoryRecord(record: QueryHistoryRecord): Promise<void> {
+  await putQueryHistoryRecord(record);
+}
+
+export async function listQueryHistoryRecords(): Promise<QueryHistoryRecord[]> {
+  return await getAllQueryHistoryRecords();
 }
 
 function safeDomain(url: string): string {

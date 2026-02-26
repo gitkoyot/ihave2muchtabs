@@ -1,4 +1,4 @@
-import type { AskAnswerResult, AzureOpenAISettings } from "./models";
+import type { AskAnswerResult, AzureOpenAISettings, CostMetrics } from "./models";
 import type { DebugLogEntry } from "../debug/logger";
 
 export type RuntimeRequest =
@@ -13,7 +13,8 @@ export type RuntimeRequest =
   | { type: "GET_DEBUG_LOGS" }
   | { type: "CLEAR_DEBUG_LOGS" }
   | { type: "CLOSE_ANALYZED_TABS"; payload?: { scope?: "all_tabs" | "current_window"; windowId?: number } }
-  | { type: "CLEAR_DATABASE" };
+  | { type: "CLEAR_DATABASE" }
+  | { type: "GET_COST_METRICS" };
 
 export type RuntimeResponse =
   | { ok: true; type: "STATUS"; payload: { status: string } }
@@ -28,4 +29,5 @@ export type RuntimeResponse =
   | { ok: true; type: "DEBUG_LOGS"; payload: { logs: DebugLogEntry[] } }
   | { ok: true; type: "DEBUG_LOGS_CLEARED" }
   | { ok: true; type: "DATABASE_CLEARED" }
+  | { ok: true; type: "COST_METRICS"; payload: CostMetrics }
   | { ok: false; error: string; details?: string };

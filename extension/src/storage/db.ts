@@ -1,4 +1,4 @@
-import type { PageAnalysis, PageDocument, PageLink, TabRecord } from "../types/models";
+import type { PageAnalysis, PageDocument, PageLink, QueryHistoryRecord, TabRecord } from "../types/models";
 
 const DB_NAME = "iHave2MuchTabsKnowledgeDb";
 const DB_VERSION = 1;
@@ -155,3 +155,18 @@ export async function clearAllDatabaseStores(): Promise<void> {
   await txToPromise(tx);
 }
 
+export async function putQueryHistoryRecord(record: QueryHistoryRecord): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction("query_history", "readwrite");
+  tx.objectStore("query_history").put(record);
+  await txToPromise(tx);
+}
+
+export async function getAllQueryHistoryRecords(): Promise<QueryHistoryRecord[]> {
+  const db = await openDb();
+  const tx = db.transaction("query_history", "readonly");
+  const req = tx.objectStore("query_history").getAll();
+  const data = await requestToPromise(req);
+  await txToPromise(tx);
+  return data;
+}

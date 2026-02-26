@@ -92,7 +92,7 @@ export async function answerQuery(
   settings: AzureOpenAISettings,
   question: string,
   retrievedRecordsJson: string
-): Promise<AskAnswerResult> {
+): Promise<{ result: AskAnswerResult; tokenUsageIn: number | null; tokenUsageOut: number | null }> {
   const response = await fetch(chatUrl(settings), {
     method: "POST",
     headers: headers(settings.apiKey),
@@ -115,5 +115,9 @@ export async function answerQuery(
   if (!content) {
     throw new Error("Azure answer missing content");
   }
-  return parseAskAnswerResultJson(content);
+  return {
+    result: parseAskAnswerResultJson(content),
+    tokenUsageIn: data.usage?.prompt_tokens ?? null,
+    tokenUsageOut: data.usage?.completion_tokens ?? null
+  };
 }

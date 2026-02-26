@@ -86,6 +86,26 @@ async function renderLogs(): Promise<void> {
     .join("\n");
 }
 
+async function renderCostMetrics(): Promise<void> {
+  const panel = byId<HTMLDivElement>("costPanel");
+  const response = await sendRuntimeMessage({ type: "GET_COST_METRICS" });
+  if (!response.ok) {
+    panel.textContent = `Cost metrics unavailable: ${response.error}`;
+    return;
+  }
+  if (response.type !== "COST_METRICS") {
+    panel.textContent = `Unexpected cost response: ${response.type}`;
+    return;
+  }
+  const { scan, query } = response.payload;
+  panel.textContent = [
+    "Token Cost Panel (estimated)",
+    `Scan -> pages: ${scan.analyzedPages}, input: ${scan.tokenIn}, output: ${scan.tokenOut}, est. USD: $${scan.estimatedUsd.toFixed(4)}`,
+    `Query -> count: ${query.count}, input: ${query.tokenIn}, output: ${query.tokenOut}, est. USD: $${query.estimatedUsd.toFixed(4)}`,
+    "Note: this is an estimate. Azure billing depends on actual deployment pricing."
+  ].join("\n");
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   byId<HTMLButtonElement>("refreshBtn").addEventListener("click", () => void renderRows());
   byId<HTMLButtonElement>("exportBtn").addEventListener("click", async () => {
@@ -128,7 +148,9 @@ window.addEventListener("DOMContentLoaded", () => {
   });
   void renderRows();
   void renderLogs();
+  void renderCostMetrics();
   window.setInterval(() => {
     void renderRows();
+    void renderCostMetrics();
   }, 2500);
 });

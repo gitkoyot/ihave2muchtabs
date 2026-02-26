@@ -91,3 +91,30 @@ export interface AskAnswerResult {
   related_urls: Array<{ url: string; reason: string }>;
   confidence: number;
 }
+
+export interface QueryHistoryRecord {
+  id: string;
+  question: string;
+  answer: string;
+  matchedUrls: string[];
+  relatedUrls: string[];
+  modelChat: string;
+  tokenUsageIn: number | null;
+  tokenUsageOut: number | null;
+  createdAt: number;
+}
+
+export interface CostMetrics {
+  scan: {
+    analyzedPages: number;
+    tokenIn: number;
+    tokenOut: number;
+    estimatedUsd: number;
+  };
+  query: {
+    count: number;
+    tokenIn: number;
+    tokenOut: number;
+    estimatedUsd: number;
+  };
+}
