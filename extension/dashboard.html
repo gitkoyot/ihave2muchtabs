@@ -5,29 +5,127 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Dashboard - I Have 2 Much Tabs</title>
     <style>
-      body { font-family: sans-serif; margin: 20px; }
-      table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-      th, td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
-      .muted { color: #666; font-size: 12px; }
-      input { width: 320px; padding: 8px; }
-      button { padding: 8px 10px; }
+      :root {
+        --bg: #efe8db;
+        --panel: #fffdf8;
+        --ink: #1f1d18;
+        --muted: #625d53;
+        --line: #ddd2c0;
+      }
+      body {
+        font-family: Georgia, "Times New Roman", serif;
+        margin: 0;
+        background:
+          radial-gradient(circle at 15% 10%, #fff8db 0, transparent 35%),
+          radial-gradient(circle at 90% 0%, #e8f1ff 0, transparent 45%),
+          var(--bg);
+        color: var(--ink);
+      }
+      .wrap { padding: 18px; }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 14px;
+        box-shadow: 0 10px 30px rgba(33, 28, 20, 0.06);
+      }
+      h1 { margin: 0 0 10px 0; font-size: 24px; }
+      .toolbar {
+        display: grid;
+        grid-template-columns: 1.2fr repeat(6, auto);
+        gap: 8px;
+        align-items: center;
+      }
+      input, button {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+      }
+      input { width: 100%; }
+      button { cursor: pointer; background: white; font-weight: 600; }
+      #exportBtn, #exportTxtBtn { background: #ecf6ff; border-color: #c8dff9; color: #123b67; }
+      #clearDbBtn { background: #fff1ef; border-color: #efc2bc; color: #7f2f24; }
+      .muted { color: var(--muted); font-size: 12px; }
+      #logsPanel {
+        background:#f8f5ee;
+        padding:10px;
+        max-height:220px;
+        overflow:auto;
+        white-space:pre-wrap;
+        border:1px solid var(--line);
+        border-radius: 12px;
+        margin-top: 10px;
+      }
+      .table-wrap {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: auto;
+        max-height: 65vh;
+        background: white;
+        margin-top: 10px;
+      }
+      table { width: 100%; border-collapse: separate; border-spacing: 0; }
+      th, td {
+        border-bottom: 1px solid #e8dfd0;
+        padding: 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        position: sticky;
+        top: 0;
+        background: #fbf8f1;
+        z-index: 1;
+        font-size: 13px;
+      }
+      tbody tr:nth-child(odd) { background: rgba(255,255,255,0.45); }
+      tbody tr:hover { background: #f8f5ef; }
+      .badge {
+        display:inline-block;
+        padding:2px 8px;
+        border-radius:999px;
+        font-size:11px;
+        border:1px solid var(--line);
+        background:#faf6ee;
+      }
+      .status-done { background:#ecfff4; border-color:#bfe5cc; color:#12623b; }
+      .status-failed { background:#fff1ef; border-color:#efc2bc; color:#8a2f22; }
+      .status-restricted { background:#fff8e8; border-color:#ead6a3; color:#7c5a12; }
+      .status-processing { background:#eef4ff; border-color:#c7d7fb; color:#17428b; }
+      .status-pending { background:#f6f6f6; border-color:#ddd; color:#555; }
     </style>
   </head>
   <body>
-    <h1>Bookmark Knowledge Dashboard</h1>
-    <div>
-      <input id="searchInput" placeholder="Search by URL, title, tag..." />
-      <button id="refreshBtn">Refresh</button>
-      <button id="exportBtn">Export JSONL</button>
+    <div class="wrap">
+      <div class="panel">
+        <h1>Open Tabs Knowledge Dashboard</h1>
+        <div class="toolbar">
+          <input id="searchInput" placeholder="Search by URL, title, tag..." />
+          <button id="refreshBtn">Refresh</button>
+          <button id="exportBtn">Export JSONL</button>
+          <button id="exportTxtBtn">Export TXT</button>
+          <button id="clearDbBtn">Clear DB</button>
+          <button id="logsBtn">Load Logs</button>
+          <button id="clearLogsBtn">Clear Logs</button>
+        </div>
+        <p class="muted" id="statsLine">Loading...</p>
+        <pre id="logsPanel" class="muted"></pre>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Tab</th>
+                <th>Detailed Summary / Links</th>
+                <th>Diagnostics</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
-    <p class="muted" id="statsLine">Loading...</p>
-    <table>
-      <thead>
-        <tr><th>Status</th><th>Bookmark</th><th>Summary</th><th>Actions</th></tr>
-      </thead>
-      <tbody id="rows"></tbody>
-    </table>
     <script type="module" src="./dist/dashboard/index.js"></script>
   </body>
   </html>
-

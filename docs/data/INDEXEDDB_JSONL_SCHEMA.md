@@ -3,6 +3,7 @@
 ## Purpose
 
 Define the local storage model (IndexedDB) and export format (`JSONL`) for the plugin-only MVP.
+Current MVP captures open tabs (not bookmarks). Some store/model names retain `bookmark_*` for compatibility during early iterations.
 
 ## Design Principles
 
@@ -111,19 +112,20 @@ Fields:
 - Default export = `processingStatus = done`.
 - Optional future setting: include failed/restricted rows.
 
-## JSONL Record Schema (v1)
+## JSONL Record Schema (v2)
 
 ```json
 {
-  "schema_version": "bookmark_knowledge.v1",
+  "schema_version": "tab_knowledge.v2",
   "exported_at": "2026-02-26T12:00:00.000Z",
   "record": {
     "id": "rec_123",
-    "bookmark_id": "456",
+    "tab_id": "456",
     "url": "https://docs.spring.io/...",
-    "bookmark_title": "Spring Security Authentication",
-    "folder_path": "Dev/Java/Spring",
-    "date_added": 1730000000000
+    "tab_title": "Spring Security Authentication",
+    "source_window_id": 123,
+    "source_window_label": "Window 123",
+    "captured_at": 1730000000000
   },
   "analysis": {
     "page_title": "Authentication :: Spring Security",
@@ -150,4 +152,3 @@ Fields:
 
 - Embeddings are included by default for easier re-import and retrieval.
 - Add an `include_embeddings` export option later if file size becomes an issue.
-

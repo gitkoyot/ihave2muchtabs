@@ -39,6 +39,10 @@ async function loadPage(): Promise<void> {
     result.textContent = `Load failed: ${response.error}`;
     return;
   }
+  if (response.type !== "SETTINGS") {
+    result.textContent = `Unexpected response: ${response.type}`;
+    return;
+  }
   writeForm(response.payload ?? DEFAULT_SETTINGS);
 }
 
@@ -46,11 +50,14 @@ async function savePage(): Promise<void> {
   const result = byId<HTMLSpanElement>("result");
   result.textContent = "Saving...";
   const response = await sendRuntimeMessage({ type: "SAVE_SETTINGS", payload: readForm() });
-  result.textContent = response.ok ? "Saved." : `Save failed: ${response.error}`;
+  if (!response.ok) {
+    result.textContent = `Save failed: ${response.error}`;
+    return;
+  }
+  result.textContent = response.type === "SETTINGS_SAVED" ? "Saved." : `Unexpected response: ${response.type}`;
 }
 
 window.addEventListener("DOMContentLoaded", () => {
   byId<HTMLButtonElement>("saveBtn").addEventListener("click", () => void savePage());
   void loadPage();
 });
-

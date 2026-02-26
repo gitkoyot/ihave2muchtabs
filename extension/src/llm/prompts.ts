@@ -29,12 +29,19 @@ ${input.contentText}
 
 Return JSON with this exact shape:
 {
-  "summary_short": "2-4 sentences",
+  "summary_short": "3-5 sentences",
+  "summary_detailed": "6-12 sentences with specific details, concepts, and practical takeaways",
   "why_relevant": "1 sentence describing why someone might have bookmarked this page",
   "tags": ["tag1", "tag2", "tag3"],
   "topics": ["topic1", "topic2"],
   "confidence": 0.0
-}`;
+}
+
+Rules:
+- Be concrete and specific.
+- Mention key terms, frameworks, APIs, and concepts explicitly.
+- Avoid generic wording.
+`;
 }
 
 export const ANSWER_SYSTEM_PROMPT = [
@@ -59,4 +66,3 @@ Return JSON with this exact shape:
   "confidence": 0.0
 }`;
 }
-

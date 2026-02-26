@@ -1,15 +1,16 @@
-import type { BookmarkRecord, PageAnalysis } from "../types/models";
+import type { PageAnalysis, TabRecord } from "../types/models";
 
 export interface ExportRow {
-  schema_version: "bookmark_knowledge.v1";
+  schema_version: "tab_knowledge.v2";
   exported_at: string;
   record: {
     id: string;
-    bookmark_id: string;
+    tab_id: string;
     url: string;
-    bookmark_title: string;
-    folder_path: string;
-    date_added: number | null;
+    tab_title: string;
+    source_window_id: number | null;
+    source_window_label: string;
+    captured_at: number;
   };
   analysis: {
     page_title: string;
@@ -18,9 +19,11 @@ export interface ExportRow {
     fetch_status: string;
     content_hash: string | null;
     summary_short_en: string;
+    summary_detailed_en: string;
     why_relevant_en: string;
     tags: string[];
     topics: string[];
+    extracted_links: string[];
     embedding: number[];
     model_chat: string;
     model_embedding: string;
@@ -32,20 +35,21 @@ export interface ExportRow {
 }
 
 export function toExportRow(
-  bookmark: BookmarkRecord,
+  tab: TabRecord,
   analysis: PageAnalysis,
   exportedAtIso: string
 ): ExportRow {
   return {
-    schema_version: "bookmark_knowledge.v1",
+    schema_version: "tab_knowledge.v2",
     exported_at: exportedAtIso,
     record: {
-      id: bookmark.id,
-      bookmark_id: bookmark.bookmarkId,
-      url: bookmark.url,
-      bookmark_title: bookmark.bookmarkTitle,
-      folder_path: bookmark.folderPath,
-      date_added: bookmark.dateAdded
+      id: tab.id,
+      tab_id: tab.tabId,
+      url: tab.url,
+      tab_title: tab.tabTitle,
+      source_window_id: tab.sourceWindowId,
+      source_window_label: tab.sourceWindowLabel,
+      captured_at: tab.capturedAt
     },
     analysis: {
       page_title: analysis.pageTitle,
@@ -54,9 +58,11 @@ export function toExportRow(
       fetch_status: analysis.fetchStatus,
       content_hash: analysis.contentHash,
       summary_short_en: analysis.summaryShortEn,
+      summary_detailed_en: analysis.summaryDetailedEn ?? "",
       why_relevant_en: analysis.whyRelevantEn,
       tags: analysis.tags,
       topics: analysis.topics,
+      extracted_links: analysis.extractedLinks ?? [],
       embedding: analysis.embedding,
       model_chat: analysis.modelChat,
       model_embedding: analysis.modelEmbedding,
@@ -71,4 +77,3 @@ export function toExportRow(
 export function toJsonl(rows: ExportRow[]): string {
   return rows.map((r) => JSON.stringify(r)).join("\n");
 }
-

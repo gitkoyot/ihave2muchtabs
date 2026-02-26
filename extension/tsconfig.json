@@ -9,8 +9,8 @@
     "exactOptionalPropertyTypes": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "types": ["chrome"]
   },
   "include": ["src/**/*.ts", "scripts/**/*.mjs"]
 }
-

@@ -1,6 +1,6 @@
 {
   "name": "ihave2muchtabs-extension",
-  "version": "0.1.0",
+  "version": "0.1.6",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,8 +9,8 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@types/chrome": "^0.0.326",
     "esbuild": "^0.25.0",
     "typescript": "^5.8.0"
   }
 }
-

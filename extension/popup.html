@@ -5,19 +5,87 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>I Have 2 Much Tabs</title>
     <style>
-      body { font-family: sans-serif; margin: 12px; width: 360px; }
-      button, input { width: 100%; margin-top: 8px; padding: 8px; }
-      .status { font-size: 12px; color: #444; white-space: pre-wrap; margin-top: 8px; }
+      :root {
+        --bg: #f4f1ea;
+        --card: #fffdf8;
+        --ink: #1e1d1a;
+        --muted: #5d5a52;
+        --line: #ddd3c4;
+        --accent: #146c43;
+        --accent-2: #0b57d0;
+      }
+      body {
+        font-family: Georgia, "Times New Roman", serif;
+        margin: 0;
+        width: 390px;
+        background: radial-gradient(circle at top right, #fff7d6, #f4f1ea 45%, #ece6db);
+        color: var(--ink);
+      }
+      .shell { padding: 12px; }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px;
+        box-shadow: 0 6px 20px rgba(30, 29, 26, 0.06);
+      }
+      .title { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+      .title h1 { font-size: 16px; margin: 0; letter-spacing: .2px; }
+      .pill { font-size: 11px; color: var(--muted); border:1px solid var(--line); padding:2px 8px; border-radius:999px; }
+      select, input, button {
+        width: 100%;
+        margin-top: 8px;
+        padding: 9px 10px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: white;
+      }
+      button { cursor: pointer; font-weight: 600; }
+      button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+      button.secondary { background: #eef4ff; color: #14376b; border-color: #c8d8fb; }
+      button.warn { background: #fff2f0; color: #8a2f22; border-color: #f0c0ba; }
+      .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+      .status {
+        font-size: 12px;
+        color: var(--ink);
+        white-space: pre-wrap;
+        margin-top: 10px;
+        background: #faf7f0;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px;
+        line-height: 1.35;
+      }
+      .muted { color: var(--muted); font-size: 11px; margin-top: 8px; }
+      .bar { height: 8px; background:#ebe3d5; border-radius:999px; overflow:hidden; margin-top:8px; border:1px solid #dfd3c0; }
+      .bar > div { height:100%; width:0%; background: linear-gradient(90deg, var(--accent-2), var(--accent)); transition: width .25s ease; }
     </style>
   </head>
   <body>
-    <h1 style="font-size:16px; margin:0;">I Have 2 Much Tabs</h1>
-    <button id="scanBtn">Start Scan</button>
-    <button id="statsBtn">Refresh Stats</button>
-    <input id="questionInput" placeholder="Ask your bookmark archive..." />
-    <button id="askBtn">Ask</button>
-    <div class="status" id="statusBox">Idle</div>
+    <div class="shell">
+      <div class="card">
+        <div class="title">
+          <h1>I Have 2 Much Tabs</h1>
+          <span class="pill">v0.1.5</span>
+        </div>
+        <select id="scanScope">
+          <option value="all_tabs">All Open Tabs</option>
+          <option value="current_window">Current Window Tabs</option>
+        </select>
+        <button id="scanBtn" class="primary">Start Scan</button>
+        <div class="grid">
+          <button id="openDashboardBtn" class="secondary">Open Dashboard</button>
+          <button id="statsBtn">Refresh Status</button>
+          <button id="exportTxtBtn">Export TXT</button>
+          <button id="closeAnalyzedBtn" class="warn">Close Analyzed Tabs</button>
+        </div>
+        <input id="questionInput" placeholder="Ask your tab archive..." />
+        <button id="askBtn" class="secondary">Ask</button>
+        <div class="bar"><div id="progressBarFill"></div></div>
+        <div class="status" id="statusBox">Idle</div>
+        <div class="muted">Live status auto-refreshes while popup is open.</div>
+      </div>
+    </div>
     <script type="module" src="./dist/popup/index.js"></script>
   </body>
   </html>
-

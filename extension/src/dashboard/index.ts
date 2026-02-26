@@ -23,18 +23,37 @@ async function renderRows(): Promise<void> {
   rowsEl.innerHTML = "";
 
   const rows = await listKnowledgeRows();
-  statsLine.textContent = `Total records: ${rows.length}`;
+  const done = rows.filter((r) => r.tab.processingStatus === "done").length;
+  const failed = rows.filter((r) => r.tab.processingStatus === "failed").length;
+  const processing = rows.filter((r) => r.tab.processingStatus === "processing").length;
+  const pending = rows.filter((r) => r.tab.processingStatus === "pending").length;
+  statsLine.textContent = `Total: ${rows.length} | Done: ${done} | Processing: ${processing} | Pending: ${pending} | Failed: ${failed}`;
 
   for (const row of rows.slice(0, 100)) {
     const tr = document.createElement("tr");
+    const diagnostics = [
+      `HTTP: ${row.analysis?.httpStatus ?? "-"}`,
+      `Fetch: ${row.analysis?.fetchStatus ?? "-"}`,
+      `Processed: ${row.tab.lastProcessedAt ? new Date(row.tab.lastProcessedAt).toLocaleString() : "-"}`,
+      `Tokens in/out: ${row.analysis ? `${row.analysis.tokenUsageIn ?? "-"} / ${row.analysis.tokenUsageOut ?? "-"}` : "-"}`,
+      `Links found: ${row.analysis?.extractedLinks?.length ?? 0}`,
+      `Last error: ${row.tab.lastErrorMessage ?? "-"}`
+    ].join("\n");
+    const detailedSummary = row.analysis?.summaryDetailedEn ?? row.analysis?.summaryShortEn ?? "";
+    const linksPreview = (row.analysis?.extractedLinks ?? []).slice(0, 5);
     tr.innerHTML = `
-      <td>${escapeHtml(row.bookmark.processingStatus)}</td>
+      <td><span class="badge status-${escapeHtml(row.tab.processingStatus)}">${escapeHtml(row.tab.processingStatus)}</span></td>
       <td>
-        <div><strong>${escapeHtml(row.bookmark.bookmarkTitle)}</strong></div>
-        <div class="muted">${escapeHtml(row.bookmark.url)}</div>
+        <div><strong>${escapeHtml(row.tab.tabTitle)}</strong></div>
+        <div class="muted">${escapeHtml(row.tab.url)}</div>
+        <div class="muted">${escapeHtml(row.tab.sourceWindowLabel)}</div>
       </td>
-      <td>${escapeHtml(row.analysis?.summaryShortEn ?? "")}</td>
-      <td><button data-url="${encodeURIComponent(row.bookmark.url)}">Open</button></td>
+      <td>
+        <div>${escapeHtml(detailedSummary)}</div>
+        <div class="muted" style="margin-top:6px;">${escapeHtml(linksPreview.join("\n"))}</div>
+      </td>
+      <td><pre style="margin:0; white-space:pre-wrap;">${escapeHtml(diagnostics)}</pre></td>
+      <td><button data-url="${encodeURIComponent(row.tab.url)}">Open</button></td>
     `;
     rowsEl.appendChild(tr);
   }
@@ -48,13 +67,66 @@ async function renderRows(): Promise<void> {
   });
 }
 
+async function renderLogs(): Promise<void> {
+  const logsPanel = byId<HTMLPreElement>("logsPanel");
+  const response = await sendRuntimeMessage({ type: "GET_DEBUG_LOGS" });
+  if (!response.ok) {
+    logsPanel.textContent = `Failed to load logs: ${response.error}`;
+    return;
+  }
+  if (response.type !== "DEBUG_LOGS") {
+    logsPanel.textContent = `Unexpected response: ${response.type}`;
+    return;
+  }
+  logsPanel.textContent = response.payload.logs
+    .slice(-80)
+    .map((l) => `${l.ts} [${l.level}] [${l.scope}] ${l.message}${l.data ? ` | ${l.data}` : ""}`)
+    .join("\n");
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   byId<HTMLButtonElement>("refreshBtn").addEventListener("click", () => void renderRows());
   byId<HTMLButtonElement>("exportBtn").addEventListener("click", async () => {
     const statsLine = byId<HTMLParagraphElement>("statsLine");
     const response = await sendRuntimeMessage({ type: "EXPORT_JSONL" });
-    statsLine.textContent = response.ok ? `Exported: ${response.payload.filename}` : `Export failed: ${response.error}`;
+    if (!response.ok) {
+      statsLine.textContent = `Export failed: ${response.error}`;
+      return;
+    }
+    statsLine.textContent =
+      response.type === "EXPORT_DONE" ? `Exported: ${response.payload.filename}` : `Unexpected response: ${response.type}`;
+  });
+  byId<HTMLButtonElement>("exportTxtBtn").addEventListener("click", async () => {
+    const statsLine = byId<HTMLParagraphElement>("statsLine");
+    const response = await sendRuntimeMessage({ type: "EXPORT_TXT" });
+    if (!response.ok) {
+      statsLine.textContent = `TXT export failed: ${response.error}`;
+      return;
+    }
+    statsLine.textContent =
+      response.type === "EXPORT_TXT_DONE" ? `TXT exported: ${response.payload.filename}` : `Unexpected response: ${response.type}`;
+  });
+  byId<HTMLButtonElement>("clearDbBtn").addEventListener("click", async () => {
+    const statsLine = byId<HTMLParagraphElement>("statsLine");
+    const confirmed = window.confirm("Clear all stored tab records, analyses, jobs, and query history?");
+    if (!confirmed) return;
+    const response = await sendRuntimeMessage({ type: "CLEAR_DATABASE" });
+    if (!response.ok) {
+      statsLine.textContent = `Clear DB failed: ${response.error}`;
+      return;
+    }
+    statsLine.textContent = response.type === "DATABASE_CLEARED" ? "Database cleared." : `Unexpected response: ${response.type}`;
+    await renderRows();
+  });
+  byId<HTMLButtonElement>("logsBtn").addEventListener("click", () => void renderLogs());
+  byId<HTMLButtonElement>("clearLogsBtn").addEventListener("click", async () => {
+    const logsPanel = byId<HTMLPreElement>("logsPanel");
+    const response = await sendRuntimeMessage({ type: "CLEAR_DEBUG_LOGS" });
+    logsPanel.textContent = response.ok ? "" : `Clear failed: ${response.error}`;
   });
   void renderRows();
+  void renderLogs();
+  window.setInterval(() => {
+    void renderRows();
+  }, 2500);
 });
-

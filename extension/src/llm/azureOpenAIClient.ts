@@ -5,6 +5,7 @@ import {
   buildAnswerUserPrompt,
   buildSummaryUserPrompt
 } from "./prompts";
+import { parseAskAnswerResultJson, parseSummaryResultJson } from "./validators";
 
 interface AzureChatResponse {
   choices?: Array<{ message?: { content?: string } }>;
@@ -62,7 +63,7 @@ export async function generateSummary(
   }
 
   return {
-    result: JSON.parse(content) as SummaryResult,
+    result: parseSummaryResultJson(content),
     tokenUsageIn: data.usage?.prompt_tokens ?? null,
     tokenUsageOut: data.usage?.completion_tokens ?? null
   };
@@ -114,6 +115,5 @@ export async function answerQuery(
   if (!content) {
     throw new Error("Azure answer missing content");
   }
-  return JSON.parse(content) as AskAnswerResult;
+  return parseAskAnswerResultJson(content);
 }
-

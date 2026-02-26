@@ -8,9 +8,14 @@ export function cosineSimilarity(a: number[], b: number[]): number {
   let normB = 0;
 
   for (let i = 0; i < a.length; i += 1) {
-    dot += a[i] * b[i];
-    normA += a[i] ** 2;
-    normB += b[i] ** 2;
+    const av = a[i];
+    const bv = b[i];
+    if (av === undefined || bv === undefined) {
+      return -1;
+    }
+    dot += av * bv;
+    normA += av ** 2;
+    normB += bv ** 2;
   }
 
   if (normA === 0 || normB === 0) {
@@ -19,4 +24,3 @@ export function cosineSimilarity(a: number[], b: number[]): number {
 
   return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
-

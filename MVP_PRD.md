@@ -2,41 +2,41 @@
 
 ## 1. Product Overview
 
-`I Have 2 Much Tabs` is a Chrome extension that helps users delete bookmarks without losing the knowledge contained in them.
+`I Have 2 Much Tabs` is a Chrome extension that helps users close/delete open tabs without losing the knowledge contained in them.
 
 Instead of keeping hundreds of bookmarks, users can build a local AI-searchable knowledge base that stores:
 
-- bookmark URL and metadata,
+- tab URL and metadata,
 - short English summaries,
 - tags/topics,
 - semantic embeddings for retrieval.
 
 Users can later ask questions like:
 
-- "Did I ever save a bookmark about Spring?"
-- "Show me bookmarks related to Spring Boot authentication."
+- "Did I have an open tab about Spring?"
+- "Show me tabs related to Spring Boot authentication."
 
 and get URL-backed answers.
 
 ## 2. Problem Statement
 
-Users collect many bookmarks as a "future reading" or "knowledge backup" system, but over time:
+Users keep many open tabs as a "temporary memory" or "knowledge backup" system, but over time:
 
-- bookmark lists become too large to manage,
-- folder organization becomes unreliable,
-- users forget what they saved and why,
+- tab counts become too large to manage,
+- users forget what was open and why,
+- browser performance and focus degrade,
 - searching by title/URL is not enough.
 
 The result is clutter and low confidence when deleting bookmarks.
 
 ## 3. MVP Goal
 
-Enable a user with 200-300 bookmarks to:
+Enable a user with 200-300 open tabs to:
 
-1. Analyze bookmarks in selected folders.
+1. Analyze currently open tabs (all windows or selected scope).
 2. Build a local searchable knowledge base (English summaries + tags + embeddings).
 3. Ask natural-language questions and retrieve relevant bookmarks with URLs.
-4. Safely delete bookmarks after the knowledge has been preserved.
+4. Safely close/delete tabs after the knowledge has been preserved.
 
 ## 4. Target User (MVP)
 
@@ -44,28 +44,28 @@ Enable a user with 200-300 bookmarks to:
 
 Individual technical user (developer/engineer) who:
 
-- has 200-300 bookmarks,
-- often saves documentation/tutorial/reference pages,
-- wants to reduce bookmark clutter,
+- has 200-300 open tabs,
+- often keeps documentation/tutorial/reference pages open,
+- wants to reduce tab clutter,
 - still wants semantic recall of previously saved content.
 
 ## 5. User Jobs To Be Done
 
-- "When I want to clean up bookmarks, I want a knowledge backup so I can delete them safely."
-- "When I vaguely remember a topic (e.g., Spring auth), I want the system to find related saved URLs."
+- "When I want to clean up open tabs, I want a knowledge backup so I can close them safely."
+- "When I vaguely remember a topic (e.g., Spring auth), I want the system to find related previously-open URLs."
 - "When I ask a question in natural language, I want results with evidence (URLs and short explanations)."
 
 ## 6. Success Criteria (MVP)
 
 ### User Outcome Metrics
 
-- User can analyze at least 200 bookmarks in one workspace.
+- User can analyze at least 200 open tabs in one workspace.
 - User receives semantically relevant results for topic-based questions (e.g., "Spring", "OAuth", "JWT").
 - User can identify and delete bookmarks after archiving with confidence.
 
 ### Product/Technical Metrics
 
-- >= 80% of public bookmarks processed successfully (non-login-protected pages).
+- >= 80% of public open-tab pages processed successfully (non-login-protected pages).
 - Query response returns top relevant URLs in under 5 seconds (for local index search + answer generation may vary by LLM latency).
 - Export file (`JSONL`) can be generated for the full workspace.
 
@@ -73,13 +73,13 @@ Individual technical user (developer/engineer) who:
 
 ## 7.1 In Scope
 
-### A. Bookmark Import and Selection
-- Read Chrome bookmarks via `chrome.bookmarks`.
-- Display folders and bookmark counts.
-- Allow selecting all bookmarks or selected folders.
+### A. Open Tab Capture and Selection
+- Read open Chrome tabs via `chrome.tabs`.
+- Display windows and tab counts.
+- Allow selecting all open tabs or selected windows (MVP may start with all tabs).
 - Skip unsupported URL schemes.
 
-### B. Bookmark Analysis Pipeline
+### B. Tab Analysis Pipeline
 - Fetch page content (best effort).
 - Extract main readable text.
 - Generate English summary.
@@ -88,7 +88,7 @@ Individual technical user (developer/engineer) who:
 - Store results locally.
 
 ### C. Local Knowledge Base
-- Store bookmark records, processing status, summaries, tags, embeddings.
+- Store tab snapshot records, processing status, summaries, tags, embeddings.
 - Support re-opening extension and continuing previous state.
 
 ### D. Natural Language Query
@@ -103,9 +103,9 @@ Individual technical user (developer/engineer) who:
 - Export local knowledge base to `JSONL`.
 - Optional `Markdown` export if low effort.
 
-### F. Bookmark Cleanup Support
-- Mark records as analyzed / safe to delete.
-- Provide visible status so user can manually delete bookmarks in Chrome.
+### F. Tab Cleanup Support
+- Mark records as analyzed / safe to close.
+- Provide visible status so user can manually close tabs in Chrome.
 
 ## 7.2 Out of Scope (MVP)
 
@@ -119,16 +119,16 @@ Individual technical user (developer/engineer) who:
 
 ## 8. Key User Flows (MVP)
 
-## 8.1 Flow 1: Build Knowledge Base from Bookmarks
+## 8.1 Flow 1: Build Knowledge Base from Open Tabs
 
 1. User opens extension.
 2. User configures Azure OpenAI settings in Options.
-3. User selects bookmark folder(s).
+3. User selects tab scope (all tabs / window scope in later UI).
 4. User clicks `Analyze`.
-5. Extension processes bookmarks and shows progress.
+5. Extension processes open tabs and shows progress.
 6. User sees completed records with summaries and statuses.
 
-## 8.2 Flow 2: Ask About Past Bookmarks
+## 8.2 Flow 2: Ask About Previously Open Tabs
 
 1. User opens extension search/ask UI.
 2. User asks: "Did I ever save something about Spring Boot auth?"
@@ -136,21 +136,21 @@ Individual technical user (developer/engineer) who:
 4. LLM returns a concise answer with URLs and short evidence.
 5. User opens one of the URLs or uses the summary.
 
-## 8.3 Flow 3: Clean Up Bookmarks
+## 8.3 Flow 3: Clean Up Tabs
 
-1. User filters for `Analyzed` or `Safe to delete`.
+1. User filters for `Analyzed` or `Safe to close`.
 2. User verifies summary and URLs.
-3. User deletes corresponding bookmarks in Chrome manually.
+3. User closes corresponding tabs in Chrome manually.
 4. Knowledge remains available in the local index and export file.
 
 ## 9. Functional Requirements (Product-Level)
 
-## 9.1 Bookmark Management
+## 9.1 Open Tab Management
 
-- The extension must read Chrome bookmark folders and URLs.
-- The extension must preserve source folder path metadata.
-- The extension should deduplicate repeated URLs.
-- The extension must show processing state per bookmark.
+- The extension must read open Chrome tabs and URLs.
+- The extension must preserve source window metadata.
+- The extension should deduplicate repeated URLs across open tabs.
+- The extension must show processing state per captured tab record.
 
 ## 9.2 Analysis and Summarization
 
@@ -222,7 +222,7 @@ Optional but useful:
 
 ## 12.1 Browser APIs
 
-- `chrome.bookmarks`
+- `chrome.tabs`
 - `chrome.storage`
 - `chrome.runtime`
 - `chrome.downloads` (for export)
@@ -288,9 +288,9 @@ Mitigation:
 MVP is accepted when all of the following are true:
 
 1. User can configure Azure OpenAI credentials in the extension.
-2. User can select bookmark folders and start analysis.
-3. The extension processes ~200-300 bookmarks with persistent status tracking.
-4. For successfully processed bookmarks, the extension stores:
+2. User can capture open tabs and start analysis.
+3. The extension processes ~200-300 open tabs with persistent status tracking.
+4. For successfully processed tab records, the extension stores:
    - URL
    - metadata
    - English summary
@@ -301,7 +301,7 @@ MVP is accepted when all of the following are true:
    - matched URLs
    - related URLs
 6. User can export the local knowledge base to `JSONL`.
-7. User can identify which bookmarks are safe to delete based on analysis status.
+7. User can identify which tabs are safe to close based on analysis status.
 
 ## 15. Post-MVP Product Direction (Optional)
 
@@ -310,4 +310,3 @@ MVP is accepted when all of the following are true:
 - "Show me what I know about X" dashboards
 - Cross-device sync
 - Local companion service for stronger credential handling
-

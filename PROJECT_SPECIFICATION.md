@@ -1,23 +1,23 @@
-# I Have 2 Much Tabs - Project Specification
+# I Have 2 Much Tabs - Project Specification (Open Tabs MVP)
 
 ## 1. Project Goal
 
-Build a Chrome-based tool that lets the user delete bookmarks while preserving the knowledge contained in them.
+Build a Chrome-based tool that lets the user close/delete open tabs while preserving the knowledge contained in them.
 
 The system should:
 
-- read Chrome bookmarks,
-- analyze bookmarked pages,
+- read currently open Chrome tabs,
+- analyze open tab pages,
 - generate English summaries and tags,
 - store a searchable local knowledge base,
 - answer semantic questions such as:
-  - "Did I ever save a bookmark about Spring?"
-  - "Show me bookmarks related to Spring Boot authentication."
+- "Did I have an open tab about Spring?"
+- "Show me tabs related to Spring Boot authentication."
 
 ## 2. Confirmed Requirements (from user)
 
-- Primary goal: reduce bookmark clutter while retaining knowledge.
-- Scale: about 200-300 bookmarks.
+- Primary goal: reduce open-tab clutter while retaining knowledge.
+- Scale: about 200-300 open tabs.
 - Summary language: English.
 - Preferred form: Chrome plugin/extension.
 - Stored data: URL + metadata (with summary/tags/embeddings for retrieval).
@@ -27,13 +27,13 @@ The system should:
 
 ### MVP Scope
 
-1. Read bookmarks from Chrome.
-2. Let user select folders/all bookmarks.
-3. Analyze each bookmark page.
+1. Read open tabs from Chrome.
+2. Let user select tabs/windows.
+3. Analyze each open tab page.
 4. Generate English summary + tags + embeddings.
 5. Store records locally.
-6. Support semantic query over saved bookmark knowledge.
-7. Return matched URLs and related bookmarks.
+6. Support semantic query over archived tab knowledge.
+7. Return matched URLs and related tabs.
 8. Export data to `JSONL` (and optionally `Markdown`).
 
 ### Post-MVP Scope
@@ -53,7 +53,7 @@ Chrome Extension (Manifest V3) with local storage:
 - `Popup UI` for quick actions and search
 - `Options Page` for Azure OpenAI settings
 - `Background Service Worker` for orchestration
-- `Bookmark Scanner` (`chrome.bookmarks`)
+- `Tab Scanner` (`chrome.tabs`)
 - `Page Fetch + Content Extraction`
 - `Azure OpenAI Client` (summary + embeddings)
 - `IndexedDB` local knowledge store
@@ -73,15 +73,15 @@ This keeps the browser extension UX while improving security and maintainability
 
 ## 5. Functional Requirements
 
-## 5.1 Bookmark Ingestion
+## 5.1 Open Tab Ingestion
 
-- Read bookmark tree (folders, subfolders, bookmark titles, URLs).
+- Read currently open tabs (title, URL, window id, tab id).
 - Allow user to select:
-  - all bookmarks,
-  - one folder,
-  - multiple folders.
-- Deduplicate identical URLs.
-- Preserve original folder path metadata.
+  - all open tabs,
+  - current window,
+  - multiple windows (future UI)
+- Deduplicate identical URLs across tabs/windows.
+- Preserve source window metadata.
 
 ## 5.2 Page Analysis
 
@@ -151,6 +151,8 @@ This keeps the browser extension UX while improving security and maintainability
 
 ## 7.1 `BookmarkRecord`
 
+Note: in the current MVP code this model is reused for open tab snapshots (legacy naming kept temporarily to avoid schema churn).
+
 - `id`
 - `bookmarkId`
 - `url`
@@ -185,7 +187,7 @@ This keeps the browser extension UX while improving security and maintainability
 
 Storing only URL + metadata is not enough for semantic recall questions such as:
 
-- "Did I ever save something about Spring Boot auth?"
+- "Did I have an open tab about Spring Boot auth?"
 
 To support this, the system needs:
 
@@ -242,7 +244,7 @@ ihave2muchtabs/
 
 ### Phase 1: PoC
 
-- Bookmark read
+- Open tabs read
 - Single-page analysis
 - Azure OpenAI summary + embedding
 - Local storage proof
@@ -263,4 +265,3 @@ ihave2muchtabs/
 ### Phase 4: Security Hardening (Optional)
 
 - Local companion service
-
