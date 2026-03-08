@@ -2,6 +2,10 @@
 
 `I Have 2 Much Tabs` is a Manifest V3 Chrome extension for converting open tabs into a local, AI-searchable knowledge base.
 
+## Important
+
+This is vibe coded app - please expect everything and nothing
+
 ## Current capabilities (as implemented)
 
 - Scans open tabs from all windows or only the current window.
