@@ -1,19 +1,35 @@
-# I Have 2 Much Tabs Extension (MVP Skeleton)
+# I Have 2 Much Tabs Extension
 
-Plugin-only MVP skeleton for archiving knowledge from currently open Chrome tabs (no local companion service).
+Chrome Extension (MV3) that scans open tabs, builds local AI knowledge records, and supports semantic Q&A.
 
-## Included
+## Status
 
-- Manifest V3 setup
-- Background service worker bootstrap
-- Popup / Options / Dashboard entry points
-- TypeScript modules for storage, open tabs capture, prompts, and Azure OpenAI integration
+This is a working MVP implementation (not only a skeleton).
 
-## Planned Build
+## Build
 
 ```bash
 npm install
+npm run typecheck
 npm run build
 ```
 
-Load `extension/` as an unpacked extension in Chrome.
+Load `extension/` as unpacked in Chrome.
+
+## Runtime components
+
+- `src/background/service-worker.ts`: orchestration, pipeline, exports, ask flow.
+- `src/popup/index.ts`: scan/start/ask/export/close controls and live status.
+- `src/dashboard/index.ts`: records table, diagnostics, logs, cost panel, DB clear, exports.
+- `src/options/index.ts`: Azure settings and processing limits.
+
+## Implemented feature set
+
+- Open-tab scan (`all_tabs` or `current_window`)
+- URL deduplication
+- Page fetch and extraction
+- Azure summary + embedding generation
+- Semantic retrieval + answer generation
+- IndexedDB persistence
+- JSONL and TXT export
+- Optional close analyzed tabs

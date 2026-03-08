@@ -1,17 +1,22 @@
 # Sample Open Tabs Set (Manual QA)
 
-Open 10-20 public tabs in Chrome for a manual QA session (you can still keep them in a folder for convenience):
+Open 10-20 public tabs in Chrome before running QA.
 
-## Suggested Mix
+## Recommended mix
 
-1. 3-5 Spring / Spring Security docs
-2. 2-3 general Java backend articles
-3. 1-2 unrelated pages (e.g., CSS, Python, Docker)
-4. 1 page that is likely blocked or returns an error
+- 4-6 backend/docs pages (Spring, auth, APIs, architecture)
+- 2-3 tooling pages (Docker, CI/CD, databases)
+- 2 unrelated pages (frontend/mobile/devops crossover)
+- 1 likely blocked page (login-required or restricted)
 
-## Why this mix
+## Why this mix matters
 
-- Verifies positive semantic matching for Spring queries
-- Verifies related tab suggestions
-- Verifies negative/noise handling
-- Verifies failure states (`failed` / `restricted`)
+- Validates strong topical matches.
+- Validates related URL suggestions.
+- Validates weak/noise handling.
+- Validates `failed` / `restricted` outcomes.
+
+## Notes
+
+- Use only `http/https` pages (other schemes are skipped by scanner).
+- Keep at least 3-5 thematically related pages for meaningful semantic retrieval tests.

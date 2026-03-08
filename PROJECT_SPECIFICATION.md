@@ -1,267 +1,109 @@
-# I Have 2 Much Tabs - Project Specification (Open Tabs MVP)
+# I Have 2 Much Tabs - Project Specification (As Built)
 
-## 1. Project Goal
+## 1. Goal
 
-Build a Chrome-based tool that lets the user close/delete open tabs while preserving the knowledge contained in them.
+Provide a Chrome-native workflow for reducing open-tab overload without losing knowledge.
 
-The system should:
+The extension captures open tabs, analyzes page content with Azure OpenAI, stores structured knowledge locally, supports semantic Q&A, and provides exports for long-term reuse.
 
-- read currently open Chrome tabs,
-- analyze open tab pages,
-- generate English summaries and tags,
-- store a searchable local knowledge base,
-- answer semantic questions such as:
-- "Did I have an open tab about Spring?"
-- "Show me tabs related to Spring Boot authentication."
+## 2. Scope (Current)
 
-## 2. Confirmed Requirements (from user)
+In scope:
 
-- Primary goal: reduce open-tab clutter while retaining knowledge.
-- Scale: about 200-300 open tabs.
-- Summary language: English.
-- Preferred form: Chrome plugin/extension.
-- Stored data: URL + metadata (with summary/tags/embeddings for retrieval).
-- LLM provider: Azure OpenAI (endpoint + API key).
+- Scan open tabs from all windows or current window.
+- Process only `http://` and `https://` URLs.
+- Deduplicate by URL within a scan.
+- Fetch page HTML and extract readable main text plus links.
+- Generate summary artifacts with Azure OpenAI:
+  - short summary
+  - detailed summary
+  - why relevant
+  - tags
+  - topics
+  - technologies
+  - embedding vector
+- Persist local records in IndexedDB.
+- Semantic retrieval + answer generation from analyzed records.
+- Export to `JSONL` and `TXT`.
+- Optional close of analyzed tabs.
 
-## 3. Product Scope
+Out of scope:
 
-### MVP Scope
+- Cloud sync / multi-user accounts
+- Browser history ingestion
+- OCR/PDF extraction
+- Full migration framework for DB schema changes
+- Automatic remote backup
 
-1. Read open tabs from Chrome.
-2. Let user select tabs/windows.
-3. Analyze each open tab page.
-4. Generate English summary + tags + embeddings.
-5. Store records locally.
-6. Support semantic query over archived tab knowledge.
-7. Return matched URLs and related tabs.
-8. Export data to `JSONL` (and optionally `Markdown`).
+## 3. Architecture
 
-### Post-MVP Scope
+- MV3 service worker orchestrates scanning, analysis, querying, and exports.
+- Popup offers quick actions and status.
+- Dashboard provides tabular insight, logs, cost estimate, and maintenance actions.
+- Options page manages Azure credentials and processing limits.
+- IndexedDB is the durable local store.
+- Azure OpenAI chat + embeddings power summarization and semantic Q&A.
 
-- Topic clustering (Spring, Auth, DevOps, etc.)
-- Better dashboard and filtering
-- Re-analysis for changed pages
-- `DOCX` export
-- Optional local companion service for better key security
+## 4. Runtime pipeline
 
-## 4. Recommended Architecture
+1. User starts scan from popup.
+2. `tabScanner` captures open tabs and creates `TabRecord` entries.
+3. Background loop marks each tab as `processing`.
+4. Page fetch + content extraction runs.
+5. LLM summary and embedding are generated.
+6. `PageDocument`, `PageLink`, and `PageAnalysis` are persisted.
+7. Tab status becomes `done`, `failed`, or `restricted`.
 
-## 4.1 MVP (Plugin-First)
+## 5. Data model summary
 
-Chrome Extension (Manifest V3) with local storage:
+Core entities:
 
-- `Popup UI` for quick actions and search
-- `Options Page` for Azure OpenAI settings
-- `Background Service Worker` for orchestration
-- `Tab Scanner` (`chrome.tabs`)
-- `Page Fetch + Content Extraction`
-- `Azure OpenAI Client` (summary + embeddings)
-- `IndexedDB` local knowledge store
-- `Semantic Search Layer`
-- `Export Module` (`JSONL`, optional `Markdown`)
+- `TabRecord`
+- `PageDocument`
+- `PageLink`
+- `PageAnalysis`
+- `QueryHistoryRecord`
 
-## 4.2 Future (Plugin + Local Companion Service)
+Status values:
 
-Add a local desktop process (small local API service) that:
+- `pending`
+- `processing`
+- `done`
+- `failed`
+- `restricted`
 
-- stores Azure OpenAI API key outside the extension,
-- performs LLM calls,
-- optionally handles crawling/extraction/retries more reliably,
-- exposes a local API consumed by the extension.
+## 6. Integrations and APIs
 
-This keeps the browser extension UX while improving security and maintainability.
+Chrome APIs used:
 
-## 5. Functional Requirements
+- `chrome.tabs`
+- `chrome.runtime`
+- `chrome.storage`
+- `chrome.downloads`
 
-## 5.1 Open Tab Ingestion
+Azure OpenAI settings required:
 
-- Read currently open tabs (title, URL, window id, tab id).
-- Allow user to select:
-  - all open tabs,
-  - current window,
-  - multiple windows (future UI)
-- Deduplicate identical URLs across tabs/windows.
-- Preserve source window metadata.
+- endpoint
+- API key
+- chat deployment
+- embeddings deployment
+- API version
 
-## 5.2 Page Analysis
+## 7. Non-functional behavior
 
-- Support `http://` and `https://` URLs.
-- Skip unsupported URLs (`chrome://`, `about:`, `javascript:`).
-- Detect and record fetch failures (`404`, `403`, timeout, SSL).
-- Mark login-required pages as `restricted` when content cannot be analyzed.
-- Extract main page text (boilerplate reduction).
-- Limit text length sent to LLM to control cost.
+- Local-first persistence.
+- Bounded analysis concurrency (effective range `1..10`).
+- Resilient per-record failure handling.
+- Diagnostic logging and estimated token-cost reporting.
 
-## 5.3 LLM Processing (Azure OpenAI)
+## 8. Security and privacy model
 
-- Generate English summaries.
-- Generate tags/topics in English.
-- Generate embeddings for semantic search.
-- Use structured output (JSON) for predictable parsing.
-
-## 5.4 Search and Q&A
-
-- Search by URL, title, tags, and semantic similarity.
-- Answer natural-language questions using top matching records.
-- Return matched URLs and related bookmarks.
-
-## 5.5 Export
-
-- Export knowledge records to `JSONL` as the canonical format.
-- Optional `Markdown` export for human-readable backup.
-
-## 6. Non-Functional Requirements
-
-## 6.1 Privacy
-
-- Default to storing:
-  - URL,
-  - titles,
-  - folder path,
-  - summary,
-  - tags/topics,
-  - embeddings,
-  - processing status.
-- Do not store full page text by default.
-- Inform user that page content is sent to Azure OpenAI during analysis.
-
-## 6.2 Security
-
-- MVP plugin-only: local storage of Azure OpenAI credentials (personal use, explicit warning).
-- Future version: move credentials to a local companion service.
-
-## 6.3 Reliability
-
-- Retry transient failures with backoff.
-- Resume interrupted runs.
-- Track per-bookmark processing status.
-
-## 6.4 Performance
-
-- Handle 200-300 bookmarks in a single workspace.
-- Limit concurrency (e.g., 2-5 parallel analyses).
-
-## 6.5 Cost Control
-
-- Configurable text limits per page.
-- Optional skip for oversized pages.
-- Token usage reporting per run (estimated or actual).
-
-## 7. Data Model (MVP)
-
-## 7.1 `BookmarkRecord`
-
-Note: in the current MVP code this model is reused for open tab snapshots (legacy naming kept temporarily to avoid schema churn).
-
-- `id`
-- `bookmarkId`
-- `url`
-- `bookmarkTitle`
-- `folderPath`
-- `dateAdded`
-- `processingStatus` (`pending|processing|done|failed|restricted`)
-- `lastProcessedAt`
-
-## 7.2 `PageAnalysis`
-
-- `recordId`
-- `pageTitle`
-- `finalUrl`
-- `httpStatus`
-- `fetchStatus`
-- `contentHash`
-- `summaryShortEn`
-- `whyRelevantEn`
-- `tags[]`
-- `topics[]`
-- `embedding[]`
-- `modelChat`
-- `modelEmbedding`
-- `tokenUsageIn`
-- `tokenUsageOut`
-- `createdAt`
-
-## 8. Semantic Retrieval Strategy
-
-### Why summaries + embeddings are required
-
-Storing only URL + metadata is not enough for semantic recall questions such as:
-
-- "Did I have an open tab about Spring Boot auth?"
-
-To support this, the system needs:
-
-- concise summaries,
-- tags/topics,
-- embeddings for semantic similarity search.
-
-This still preserves a privacy-first design because full page text does not need to be stored by default.
-
-## 9. Azure OpenAI Integration Requirements
-
-User-configurable settings (in extension options):
-
-- `Azure OpenAI Endpoint`
-- `API Key`
-- `Chat Deployment Name`
-- `Embeddings Deployment Name`
-- `API Version`
-
-LLM tasks:
-
-- summary generation
-- tagging/topic extraction
-- embedding generation
-- final answer generation over top-K matched bookmark records
-
-## 10. Suggested Repository Structure (English)
-
-```text
-ihave2muchtabs/
-  extension/
-    manifest.json
-    src/
-      popup/
-      options/
-      dashboard/
-      background/
-      bookmarks/
-      fetcher/
-      extractor/
-      llm/
-      storage/
-      search/
-      export/
-      types/
-  docs/
-    architecture/
-    prompts/
-  PROJECT_SPECIFICATION.md
-  MVP_PRD.md
-```
-
-## 11. Delivery Roadmap (High Level)
-
-### Phase 1: PoC
-
-- Open tabs read
-- Single-page analysis
-- Azure OpenAI summary + embedding
-- Local storage proof
-
-### Phase 2: MVP
-
-- Batch processing (200-300 bookmarks)
-- Resume/retry
-- Semantic search and Q&A
-- JSONL export
-
-### Phase 3: UX Improvements
-
-- Better dashboard
-- Related bookmarks
-- "Safe to delete" workflow
-
-### Phase 4: Security Hardening (Optional)
-
-- Local companion service
+- Credentials are stored in local extension storage.
+- Page content is sent to user-configured Azure OpenAI endpoint for analysis/query.
+- Extension code is packaged locally; no remote code execution.
+
+## 9. Quality and operations notes
+
+- Current DB version: `1`.
+- Export schema: `tab_knowledge.v2`.
+- Cost estimate is heuristic and should not be treated as billing truth.

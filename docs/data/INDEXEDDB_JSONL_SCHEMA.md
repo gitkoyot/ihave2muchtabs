@@ -1,36 +1,30 @@
-# IndexedDB and JSONL Schema (MVP)
+# IndexedDB and Export Schema
 
-## Purpose
+This document reflects the current implementation in `extension/src/storage/db.ts` and export modules.
 
-Define the local storage model (IndexedDB) and export format (`JSONL`) for the plugin-only MVP.
-Current schema is open-tabs-first and uses dedicated domain stores.
-
-## Design Principles
-
-- Store only what is needed for semantic recall.
-- Do not store full page text by default.
-- Keep records versioned for migration.
-- Keep export AI-friendly.
-
-## IndexedDB Database
+## Database
 
 - Name: `iHave2MuchTabsKnowledgeDb`
 - Version: `1`
 
-## Object Stores
+## Object stores
 
 ### `tab_captures`
+
+Purpose: open-tab snapshots and processing status.
 
 Fields:
 
 - `id`
-- `bookmarkId`
+- `tabId`
 - `url`
-- `bookmarkTitle`
-- `folderPath`
-- `dateAdded`
-- `processingStatus` (`pending|processing|done|failed|restricted`)
+- `tabTitle`
+- `sourceWindowId`
+- `sourceWindowLabel`
+- `capturedAt`
+- `processingStatus`
 - `lastProcessedAt`
+- `lastErrorMessage`
 - `createdAt`
 - `updatedAt`
 
@@ -38,10 +32,12 @@ Indexes:
 
 - `by_url` (unique)
 - `by_status`
-- `by_folder`
+- `by_window`
 - `by_updated_at`
 
 ### `page_documents`
+
+Purpose: canonical page identity + content hash timeline.
 
 Fields:
 
@@ -60,6 +56,8 @@ Indexes:
 
 ### `page_analyses`
 
+Purpose: AI analysis payload per captured tab record.
+
 Fields:
 
 - `id`
@@ -71,9 +69,12 @@ Fields:
 - `fetchStatus`
 - `contentHash`
 - `summaryShortEn`
+- `summaryDetailedEn`
 - `whyRelevantEn`
 - `tags[]`
 - `topics[]`
+- `technologies[]`
+- `extractedLinks[]`
 - `embedding[]`
 - `modelChat`
 - `modelEmbedding`
@@ -85,89 +86,81 @@ Fields:
 
 Indexes:
 
-- `by_record_id` (unique for MVP)
+- `by_record_id` (unique)
+- `by_document_id`
 - `by_final_url`
 - `by_fetch_status`
 - `by_tags` (multiEntry)
 - `by_topics` (multiEntry)
+- `by_technologies` (multiEntry)
 
-### `processing_jobs`
-Store name in current schema: `scan_jobs`.
+### `page_links`
 
-Fields:
-
-- `id`
-- `name`
-- `selectedFolderIds[]`
-- `status`
-- `totalItems`
-- `completedItems`
-- `failedItems`
-- `restrictedItems`
-- `startedAt`
-- `finishedAt`
-- `lastHeartbeatAt`
-
-### `query_history` (optional)
+Purpose: normalized outgoing links per document.
 
 Fields:
 
 - `id`
-- `queryText`
-- `answerText`
-- `matchedRecordIds[]`
-- `relatedRecordIds[]`
+- `documentId`
+- `toUrl`
 - `createdAt`
 
-## JSONL Export
+Indexes:
 
-## File Naming
+- `by_document_id`
+- `by_to_url`
 
-- `bookmark-knowledge-export-YYYYMMDD-HHMMSS.jsonl`
+### `scan_jobs`
 
-## Record Strategy
+Purpose: reserved store for scan job metadata.
 
-- One line = one analyzed bookmark.
-- Default export = `processingStatus = done`.
-- Optional future setting: include failed/restricted rows.
+Indexes:
 
-## JSONL Record Schema (v2)
+- `by_status`
+- `by_started_at`
 
-```json
-{
-  "schema_version": "tab_knowledge.v2",
-  "exported_at": "2026-02-26T12:00:00.000Z",
-  "record": {
-    "id": "rec_123",
-    "tab_id": "456",
-    "url": "https://docs.spring.io/...",
-    "tab_title": "Spring Security Authentication",
-    "source_window_id": 123,
-    "source_window_label": "Window 123",
-    "captured_at": 1730000000000
-  },
-  "analysis": {
-    "page_title": "Authentication :: Spring Security",
-    "final_url": "https://docs.spring.io/...",
-    "http_status": 200,
-    "fetch_status": "ok",
-    "content_hash": "sha256:...",
-    "summary_short_en": "Overview of Spring Security authentication mechanisms...",
-    "why_relevant_en": "Useful reference for configuring authentication flows in Spring Boot apps.",
-    "tags": ["spring", "spring-security", "authentication"],
-    "topics": ["spring-boot", "security", "auth"],
-    "embedding": [0.1, 0.2, 0.3],
-    "model_chat": "gpt-4.1-mini",
-    "model_embedding": "text-embedding-3-large",
-    "prompt_version": "summary_v1",
-    "token_usage_in": 1450,
-    "token_usage_out": 180,
-    "analyzed_at": "2026-02-26T12:01:22.000Z"
-  }
-}
-```
+### `query_history`
 
-## Notes
+Purpose: query/answer history and token usage.
 
-- Embeddings are included by default for easier re-import and retrieval.
-- Add an `include_embeddings` export option later if file size becomes an issue.
+Fields:
+
+- `id`
+- `question`
+- `answer`
+- `matchedUrls[]`
+- `relatedUrls[]`
+- `modelChat`
+- `tokenUsageIn`
+- `tokenUsageOut`
+- `createdAt`
+
+Index:
+
+- `by_created_at`
+
+## JSONL export
+
+- Trigger: `EXPORT_JSONL`
+- Filename pattern: `bookmark-knowledge-export-<ISO timestamp>.jsonl`
+- Includes records where tab status is `done` and analysis exists.
+
+Schema version:
+
+- `tab_knowledge.v2`
+
+Per-line object includes:
+
+- `schema_version`
+- `exported_at`
+- `record` block
+- `analysis` block
+
+`analysis` block includes `technologies`, `extracted_links`, and full `embedding` vector.
+
+## TXT export
+
+- Trigger: `EXPORT_TXT`
+- Filename pattern: `tab-knowledge-export-<ISO timestamp>.txt`
+- Schema marker in file header: `tab_knowledge.v2-txt`
+- Includes only analyzed (`done`) records with summaries and metadata in readable sections.

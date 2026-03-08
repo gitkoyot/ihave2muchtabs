@@ -1,115 +1,105 @@
-# Manual QA Checklist (MVP Plugin-Only)
+# Manual QA Checklist
 
-## Purpose
-
-Validate the end-to-end MVP behavior on a small open-tab subset (10-20 tabs) before running on the full 200-300 set.
+Validate end-to-end behavior on a 10-20 tab sample before large runs.
 
 ## Preconditions
 
-- Extension built and loaded in Chrome (unpacked).
-- Azure OpenAI settings configured in `Options`.
-- 10-20 public tabs opened in Chrome (preferably technical docs/tutorials).
+- Extension is built and loaded unpacked.
+- Azure OpenAI settings are configured in Options.
+- At least 10 public `http/https` tabs are open.
 
-## Step 1 Verification: Ingest Pipeline (`fetch -> extract -> summarize -> embed -> persist`)
+## 1. Scan and processing pipeline
 
-### Test 1.1 - Start scan and persist open-tab records
+### 1.1 Start scan
 
-1. Open extension popup.
-2. Click `Start Scan`.
-3. Open dashboard.
-4. Confirm rows appear with `pending/processing/done/failed/restricted` statuses.
-
-Expected:
-
-- Tab records are created in dashboard.
-- Status changes over time (not permanently `pending`).
-
-### Test 1.2 - Successful page analysis
-
-Pick a known public tab (e.g., Spring docs).
+1. Open popup.
+2. Choose scope (`All Open Tabs` or `Current Window Tabs`).
+3. Click `Start Scan`.
+4. Open dashboard.
 
 Expected:
 
-- Row ends with `done`.
-- Summary is populated.
-- Export later includes tags/topics and embedding.
+- Rows appear in dashboard.
+- Status transitions from `pending` to `processing` and final states.
 
-### Test 1.3 - Restricted/failed page handling
-
-Keep at least one tab URL likely to fail or be blocked.
+### 1.2 Verify dedup and unsupported URL skipping
 
 Expected:
 
-- Row ends as `failed` or `restricted`.
-- Other tabs continue processing (no global stop).
+- Duplicate URLs are not duplicated in captured records for the same scan.
+- Unsupported schemes (`chrome://`, etc.) are ignored.
 
-## Step 2 Verification: `ASK_QUERY` Retrieval + Answer
+### 1.3 Validate successful analysis
 
-### Test 2.1 - Query after at least 3-5 analyzed rows
+Expected for done items:
 
-Use a topical question, e.g.:
+- `summaryShortEn` and `summaryDetailedEn` are visible.
+- Topics/tags/technologies are populated.
 
-- `Did I save any bookmark about Spring Boot authentication?`
-
-Expected:
-
-- Popup returns an answer (not "not implemented").
-- Output includes `matched_urls`.
-- Output includes `related_urls` when relevant.
-
-### Test 2.2 - Empty/invalid query handling
-
-Submit empty input.
+### 1.4 Validate failure classification
 
 Expected:
 
-- UI shows validation message (`Enter a question first.` or equivalent).
+- Restricted or blocked pages end as `restricted` or `failed`.
+- Other records continue processing.
 
-## Step 3 Verification: Runtime LLM JSON Validation
+## 2. Ask flow
 
-### Test 3.1 - Normal path
+### 2.1 Valid semantic query
 
-Run analysis and ask query on valid pages.
-
-Expected:
-
-- No crashes due to malformed LLM JSON.
-- Parsed summaries and answers populate fields correctly.
-
-### Test 3.2 - Fault injection (optional)
-
-Temporarily break a prompt shape or use a non-JSON prompt response mode.
+Use questions from `docs/testing/SAMPLE_QUERY_FIXTURES.md`.
 
 Expected:
 
-- Pipeline marks failure rather than saving corrupted data.
-- Error is surfaced in UI/logs.
+- Response contains answer and confidence.
+- `matched_urls` and optionally `related_urls` are returned.
 
-## Step 4 Verification: Fixtures + Export + QA Assets
-
-### Test 4.1 - Export JSONL
-
-1. Open dashboard.
-2. Click `Export JSONL`.
-3. Save file.
+### 2.2 Empty query
 
 Expected:
 
-- `.jsonl` file is downloaded.
-- Each line is a valid JSON object.
-- `schema_version = bookmark_knowledge.v1`.
+- Popup shows validation message and does not crash.
 
-### Test 4.2 - Fixture questions coverage
+## 3. Export flow
 
-Run sample questions from `docs/testing/SAMPLE_QUERY_FIXTURES.md`.
+### 3.1 JSONL export
+
+1. Dashboard -> `Export JSONL`.
+2. Save file.
 
 Expected:
 
-- Technical topical questions return relevant URLs.
-- Broader questions return related URLs with weaker confidence.
+- File downloads successfully.
+- Each line is valid JSON.
+- `schema_version` is `tab_knowledge.v2`.
 
-## Regression Checks
+### 3.2 TXT export
 
-- Re-run `Start Scan` does not duplicate existing open-tab URLs in storage.
-- Existing analyzed records remain visible after browser restart.
-- Options settings persist after reopening extension options page.
+1. Popup or dashboard -> `Export TXT`.
+
+Expected:
+
+- File downloads successfully.
+- Header contains `Schema: tab_knowledge.v2-txt`.
+
+## 4. Maintenance actions
+
+### 4.1 Debug logs
+
+- `Load Logs` shows recent entries.
+- `Clear Logs` clears panel.
+
+### 4.2 Clear DB
+
+- `Clear DB` removes records and resets dashboard list.
+
+### 4.3 Close analyzed tabs
+
+- Popup -> `Close Analyzed Tabs` after scan.
+- In current-window mode, active tab is not closed.
+
+## 5. Persistence regression checks
+
+- Settings persist after extension reload.
+- Analyzed rows remain after browser restart.
+- Ask still works after reopening popup.

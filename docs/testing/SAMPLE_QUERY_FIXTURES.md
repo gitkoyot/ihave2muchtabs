@@ -1,31 +1,36 @@
-# Sample Query Fixtures (MVP)
+# Sample Query Fixtures
 
-Use these questions after analyzing a small set of open tabs (10-20 URLs) including at least some developer documentation.
+Use these questions after analyzing a mixed set of tabs.
 
-## Topic-Specific Queries
+## Targeted queries
 
 - `Did I have any open tab about Spring Boot authentication?`
-- `Do I have tabs related to OAuth2 in Spring?`
-- `Did I keep any tab about JWT authentication?`
-- `Show me tabs about Java dependency injection.`
+- `Do I have tabs related to OAuth2 in Spring Security?`
+- `Show me tabs about JWT authentication setup.`
+- `Which tabs discuss Java dependency injection patterns?`
 
-## Broader Technical Recall Queries
+## Broader recall queries
 
-- `Did I have anything open about Spring Security?`
-- `What tabs do I have about API authorization?`
-- `Do I have docs related to backend security configuration?`
+- `What did I save about backend authorization?`
+- `Do I have anything about API security architecture?`
+- `Which tabs look relevant to secure login flows?`
 
-## Comparative/Discovery Queries
+## Comparative queries
 
-- `Besides the main Spring auth page, what related tabs do I have?`
-- `Which previously open tabs look related to Spring Boot security even if they are not exactly authentication docs?`
+- `Besides the main Spring auth docs, what related pages did I capture?`
+- `Which analyzed tabs are similar but not directly about authentication?`
 
-## Negative/Control Queries
+## Control queries
 
-- `Did I have anything open about Kubernetes operators?` (when no such tabs were analyzed)
-- `Do I have bookmarks about SwiftUI animations?` (when dataset is backend-focused)
+- `Did I save anything about Kubernetes operators?` (when dataset does not contain it)
+- `Do I have tabs about SwiftUI animations?` (backend-focused dataset)
 
-Expected behavior:
+## Expected output behavior
 
-- The answer should remain grounded in retrieved records only.
-- If no strong matches exist, answer should explicitly say evidence is weak/absent.
+- Answers stay grounded in retrieved records.
+- Output shape includes:
+  - `answer`
+  - `matched_urls`
+  - `related_urls`
+  - `confidence`
+- When evidence is weak, answer should explicitly state uncertainty.

@@ -1,81 +1,77 @@
 # I Have 2 Much Tabs
 
-## WARNING
+`I Have 2 Much Tabs` is a Manifest V3 Chrome extension for converting open tabs into a local, AI-searchable knowledge base.
 
-## THIS IS A VIBE-CODED APPLICATION.
-## EXPECT ROUGH EDGES, INCOMPLETE FLOWS, AND OCCASIONAL BREAKING CHANGES.
-## USE IT AS A PERSONAL EXPERIMENTAL TOOL.
+## Current capabilities (as implemented)
 
-## What this extension does
+- Scans open tabs from all windows or only the current window.
+- Supports only `http://` and `https://` tabs.
+- Deduplicates tabs by URL at scan time.
+- Fetches and extracts page text and links.
+- Generates summary, detailed summary, tags, topics, technologies, and embedding through Azure OpenAI.
+- Stores records in local IndexedDB and settings in `chrome.storage.local`.
+- Supports semantic Q&A over analyzed records (`ASK_QUERY`).
+- Exports analyzed knowledge as `JSONL` (`tab_knowledge.v2`) and LLM-friendly `TXT`.
+- Shows processing statuses, diagnostics, logs, and estimated token cost.
+- Optionally closes already analyzed tabs after user confirmation.
 
-`I Have 2 Much Tabs` is a Chrome extension that helps you reduce open-tab chaos while keeping searchable knowledge.
+## Tech stack
 
-It can:
+- Chrome Extension Manifest V3
+- TypeScript + esbuild
+- IndexedDB (local KB)
+- Azure OpenAI (chat + embeddings)
 
-- scan currently open tabs,
-- extract page text and links,
-- generate summaries/tags/topics/technologies with Azure OpenAI,
-- let you ask semantic questions about previously analyzed tabs,
-- export knowledge to `JSONL` and LLM-friendly `TXT`,
-- show token usage/cost estimates in dashboard,
-- close analyzed tabs when you decide.
-
-## Installation (Local)
-
-### 1. Clone repository
-
-```bash
-git clone <YOUR_REPO_URL>
-cd ihave2muchtabs/extension
-```
-
-### 2. Install dependencies
+## Local setup
 
 ```bash
+cd extension
 npm install
-```
-
-### 3. Typecheck and build
-
-```bash
 npm run typecheck
 npm run build
 ```
 
-### 4. Load extension in Chrome
+Load unpacked extension from `extension/` in `chrome://extensions`.
 
-1. Open: `chrome://extensions`
-2. Enable `Developer mode`
-3. Click `Load unpacked`
-4. Select folder: `.../ihave2muchtabs/extension`
+## Required configuration
 
-### 5. Configure Azure OpenAI
+Set in extension `Options`:
 
-Open extension `Options` and set:
+- Azure endpoint
+- API key
+- Chat deployment
+- Embedding deployment
+- API version (default in app: `2024-10-21`)
+- Max chars per page (default: `12000`)
+- Max concurrency (default: `2`)
 
-- `Azure OpenAI Endpoint` (base URL only, e.g. `https://<resource>.openai.azure.com`)
-- `API Key`
-- `Chat Deployment Name`
-- `Embeddings Deployment Name`
-- `API Version`
+## Typical flow
 
-## How to use
+1. Open popup.
+2. Pick scope (`All Open Tabs` or `Current Window Tabs`).
+3. Start scan.
+4. Watch progress in popup/dashboard.
+5. Ask semantic questions in popup.
+6. Export JSONL/TXT when needed.
+7. Optionally close analyzed tabs.
 
-1. Open your tabs in Chrome.
-2. Open extension popup.
-3. Choose scan scope (`All Open Tabs` / `Current Window Tabs`).
-4. Click `Start Scan`.
-5. Open `Dashboard` to monitor progress, logs, summaries, and costs.
-6. Ask questions in popup (`Ask`).
-7. Export results (`JSONL` / `TXT`) when needed.
+## Storage and privacy model
 
-## Data storage
+- Local persistence:
+  - IndexedDB: tab captures, analyses, page documents/links, query history.
+  - `chrome.storage.local`: Azure settings.
+- Page content is sent to the user-configured Azure OpenAI endpoint for analysis/query.
+- No remote code execution in extension runtime.
 
-Data is stored locally in Chrome extension storage / IndexedDB.
-This project currently uses a fresh knowledge DB schema (no migration from older schemas).
+## Important limitations
 
-## Notes
+- Login-protected pages may fail or be marked `restricted`.
+- Cost panel is an estimate, not billing truth.
+- No migration path between future DB schema versions yet.
 
-- Cost panel in dashboard is an estimate, not exact Azure billing.
-- For major updates, clear/rebuild local DB if schema behavior changes.
+## Documentation map
 
+- Product memory: `docs/PROJECT_MEMORY.md`
+- Schema: `docs/data/INDEXEDDB_JSONL_SCHEMA.md`
+- Prompts: `docs/prompts/AZURE_OPENAI_PROMPTS.md`
+- Manual QA: `docs/testing/MANUAL_QA_CHECKLIST.md`
