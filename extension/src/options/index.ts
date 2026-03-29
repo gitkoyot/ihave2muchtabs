@@ -67,7 +67,8 @@ function setupTabs(): void {
   };
 
   for (const tab of tabs) {
-    tab.addEventListener("click", () => {
+    tab.addEventListener("click", (e) => {
+      e.preventDefault();
       const target = tab.dataset.tab;
       if (!target) return;
 
