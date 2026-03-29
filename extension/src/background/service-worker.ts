@@ -4,7 +4,7 @@ import { extractMainTextFromHtml } from "../extractor/contentExtractor";
 import { toExportRow, toJsonl } from "../export/jsonl";
 import { buildLlmFriendlyTxtExport } from "../export/txt";
 import { fetchPage } from "../fetcher/pageFetcher";
-import { answerQuery, generateEmbedding, generateSummary } from "../llm/azureOpenAIClient";
+import { generateSummary, generateEmbedding, answerQuery } from "../llm/llmProvider";
 import { PROMPT_VERSIONS } from "../llm/prompts";
 import { rankAnalysesBySimilarity } from "../search/retrieval";
 import { loadSettings, saveSettings } from "../settings/settings";
@@ -21,7 +21,7 @@ import {
   saveTabRecords,
   savePageAnalysis
 } from "../storage/repository";
-import type { PageAnalysis, TabRecord } from "../types/models";
+import type { LlmSettings, PageAnalysis, TabRecord } from "../types/models";
 import type { RuntimeRequest, RuntimeResponse } from "../types/messages";
 import { sha256Hex } from "../utils/hash";
 import { makeId } from "../utils/id";
@@ -162,17 +162,46 @@ async function handleMessage(message: RuntimeRequest): Promise<RuntimeResponse> 
   }
 }
 
-function hasUsableAzureSettings(
-  settings: Awaited<ReturnType<typeof loadSettings>>
-): settings is NonNullable<Awaited<ReturnType<typeof loadSettings>>> {
-  return Boolean(
-    settings &&
-      settings.endpoint &&
-      settings.apiKey &&
-      settings.chatDeployment &&
-      settings.embeddingDeployment &&
-      settings.apiVersion
-  );
+function hasUsableSettings(settings: LlmSettings | null): settings is LlmSettings {
+  if (!settings) return false;
+
+  switch (settings.provider) {
+    case "azure_openai":
+      if (!settings.azure.endpoint || !settings.azure.apiKey || !settings.azure.chatDeployment || !settings.azure.apiVersion) return false;
+      break;
+    case "anthropic":
+      if (!settings.anthropic.apiKey || !settings.anthropic.model) return false;
+      break;
+    case "copilot":
+      if (!settings.copilot.endpoint || !settings.copilot.apiKey || !settings.copilot.chatModel) return false;
+      break;
+  }
+
+  switch (settings.embeddingProvider) {
+    case "azure_openai":
+      if (!settings.azure.endpoint || !settings.azure.apiKey || !settings.azure.embeddingDeployment || !settings.azure.apiVersion) return false;
+      break;
+    case "copilot":
+      if (!settings.copilot.endpoint || !settings.copilot.apiKey || !settings.copilot.embeddingModel) return false;
+      break;
+  }
+
+  return true;
+}
+
+function getChatModelLabel(settings: LlmSettings): string {
+  switch (settings.provider) {
+    case "azure_openai": return settings.azure.chatDeployment;
+    case "anthropic": return settings.anthropic.model;
+    case "copilot": return settings.copilot.chatModel;
+  }
+}
+
+function getEmbeddingModelLabel(settings: LlmSettings): string {
+  switch (settings.embeddingProvider) {
+    case "azure_openai": return settings.azure.embeddingDeployment;
+    case "copilot": return settings.copilot.embeddingModel;
+  }
 }
 
 async function ensureAnalysisLoop(): Promise<void> {
@@ -187,9 +216,9 @@ async function ensureAnalysisLoop(): Promise<void> {
 
 async function runPendingAnalysisLoop(): Promise<void> {
   const settings = await loadSettings();
-  if (!hasUsableAzureSettings(settings)) {
+  if (!hasUsableSettings(settings)) {
     runtimeStatus = "waiting_for_settings";
-    await logWarn("analysis", "Analysis loop blocked: Azure settings missing or incomplete");
+    await logWarn("analysis", "Analysis loop blocked: LLM settings missing or incomplete");
     return;
   }
 
@@ -205,7 +234,9 @@ async function runPendingAnalysisLoop(): Promise<void> {
   const concurrency = Math.max(1, Math.min(10, settings.maxConcurrency || 2));
   await logInfo("analysis", "Starting pending tab analysis loop", {
     pendingCount: pending.length,
-    concurrency
+    concurrency,
+    chatProvider: settings.provider,
+    embeddingProvider: settings.embeddingProvider
   });
   let cursor = 0;
 
@@ -232,7 +263,7 @@ async function runPendingAnalysisLoop(): Promise<void> {
 
 async function processBookmarkRecord(
   record: TabRecord,
-  settings: NonNullable<Awaited<ReturnType<typeof loadSettings>>>
+  settings: LlmSettings
 ): Promise<void> {
   const processingRecord: TabRecord = {
     ...record,
@@ -344,8 +375,8 @@ async function processBookmarkRecord(
       technologies: summary.result.technologies,
       extractedLinks: extracted.links,
       embedding,
-      modelChat: settings.chatDeployment,
-      modelEmbedding: settings.embeddingDeployment,
+      modelChat: getChatModelLabel(settings),
+      modelEmbedding: getEmbeddingModelLabel(settings),
       promptVersion: PROMPT_VERSIONS.summary,
       tokenUsageIn: summary.tokenUsageIn,
       tokenUsageOut: summary.tokenUsageOut,
@@ -390,9 +421,9 @@ async function handleAskQuery(question: string): Promise<RuntimeResponse> {
   }
 
   const settings = await loadSettings();
-  if (!hasUsableAzureSettings(settings)) {
-    await logWarn("ask", "ASK_QUERY blocked: Azure settings missing");
-    return { ok: false, error: "Azure OpenAI settings are missing or incomplete" };
+  if (!hasUsableSettings(settings)) {
+    await logWarn("ask", "ASK_QUERY blocked: LLM settings missing");
+    return { ok: false, error: "LLM settings are missing or incomplete" };
   }
 
   const [tabs, analyses] = await Promise.all([listTabRecords(), listPageAnalyses()]);
@@ -440,7 +471,7 @@ async function handleAskQuery(question: string): Promise<RuntimeResponse> {
     answer: answer.result.answer,
     matchedUrls: answer.result.matched_urls.map((u) => u.url),
     relatedUrls: answer.result.related_urls.map((u) => u.url),
-    modelChat: settings.chatDeployment,
+    modelChat: getChatModelLabel(settings),
     tokenUsageIn: answer.tokenUsageIn,
     tokenUsageOut: answer.tokenUsageOut,
     createdAt: Date.now()
@@ -476,7 +507,6 @@ async function handleCloseAnalyzedTabs(
     if (!tab.url?.startsWith("http://") && !tab.url?.startsWith("https://")) continue;
     if (!analyzedUrls.has(tab.url)) continue;
     if (tab.active && scope === "current_window") {
-      // Avoid closing the active tab in current-window mode to reduce accidental context loss.
       continue;
     }
     closableTabIds.push(tab.id);
@@ -506,7 +536,6 @@ async function handleGetCostMetrics(): Promise<RuntimeResponse> {
   const queryTokenIn = queries.reduce((sum, q) => sum + (q.tokenUsageIn ?? 0), 0);
   const queryTokenOut = queries.reduce((sum, q) => sum + (q.tokenUsageOut ?? 0), 0);
 
-  // Heuristic estimate only. Real billing depends on model/deployment pricing in Azure.
   const estimatedScanUsd = estimateUsd(scanTokenIn, scanTokenOut);
   const estimatedQueryUsd = estimateUsd(queryTokenIn, queryTokenOut);
 
@@ -531,7 +560,6 @@ async function handleGetCostMetrics(): Promise<RuntimeResponse> {
 }
 
 function estimateUsd(tokenIn: number, tokenOut: number): number {
-  // Approximation baseline (per 1M tokens): input $5, output $15.
   const inputPerMillion = 5;
   const outputPerMillion = 15;
   const usd = (tokenIn / 1_000_000) * inputPerMillion + (tokenOut / 1_000_000) * outputPerMillion;
