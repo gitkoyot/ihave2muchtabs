@@ -7,31 +7,109 @@
     <style>
       body { font-family: sans-serif; margin: 20px; max-width: 800px; }
       label { display: block; margin-top: 12px; font-weight: 600; }
-      input { width: 100%; padding: 8px; margin-top: 6px; }
+      input, select { width: 100%; padding: 8px; margin-top: 6px; box-sizing: border-box; }
       .small { color: #555; font-size: 12px; margin-top: 10px; display: block; }
+      .section { margin-top: 24px; padding: 16px; border: 1px solid #ddd; border-radius: 8px; }
+      .section h3 { margin-top: 0; }
+      .provider-section { display: none; }
+      .provider-section.active { display: block; }
+      .tab-bar { display: flex; gap: 0; margin-top: 16px; border-bottom: 2px solid #ddd; }
+      .tab-bar button { padding: 10px 20px; border: 1px solid #ddd; border-bottom: none; background: #f5f5f5; cursor: pointer; font-weight: 600; border-radius: 6px 6px 0 0; margin-bottom: -2px; }
+      .tab-bar button.active { background: #fff; border-bottom: 2px solid #fff; color: #1a73e8; }
+      .hint { color: #888; font-size: 11px; margin-top: 4px; }
+      fieldset { border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px 16px; margin-top: 16px; }
+      legend { font-weight: 600; font-size: 14px; padding: 0 6px; }
     </style>
   </head>
   <body>
     <h1>Options</h1>
-    <span class="small">Plugin-only MVP stores Azure OpenAI credentials locally in Chrome storage.</span>
+    <span class="small">Configure your LLM provider for tab analysis and semantic search.</span>
 
-    <label for="endpoint">Azure OpenAI Endpoint</label>
-    <input id="endpoint" type="text" />
-    <label for="apiKey">API Key</label>
-    <input id="apiKey" type="password" />
-    <label for="chatDeployment">Chat Deployment Name</label>
-    <input id="chatDeployment" type="text" />
-    <label for="embeddingDeployment">Embeddings Deployment Name</label>
-    <input id="embeddingDeployment" type="text" />
-    <label for="apiVersion">API Version</label>
-    <input id="apiVersion" type="text" />
-    <label for="maxCharsPerPage">Max Chars Per Page</label>
-    <input id="maxCharsPerPage" type="number" />
-    <label for="maxConcurrency">Max Concurrency</label>
-    <input id="maxConcurrency" type="number" />
-    <button id="saveBtn" style="margin-top:16px;">Save Settings</button>
+    <!-- Chat Provider Selection -->
+    <label for="provider">Chat Provider (summaries & Q&A)</label>
+    <select id="provider">
+      <option value="azure_openai">Azure OpenAI</option>
+      <option value="anthropic">Anthropic (Claude)</option>
+      <option value="copilot">Microsoft Copilot / OpenAI-compatible</option>
+    </select>
+
+    <!-- Embedding Provider Selection -->
+    <label for="embeddingProvider">Embedding Provider (vector search)</label>
+    <select id="embeddingProvider">
+      <option value="azure_openai">Azure OpenAI</option>
+      <option value="copilot">Microsoft Copilot / OpenAI-compatible</option>
+    </select>
+    <span class="hint">Anthropic does not provide embeddings. Use Azure or Copilot endpoint for vector search.</span>
+
+    <!-- Provider-specific sections -->
+    <div class="tab-bar">
+      <button id="tabAzure" class="active" data-tab="azure">Azure OpenAI</button>
+      <button id="tabAnthropic" data-tab="anthropic">Anthropic</button>
+      <button id="tabCopilot" data-tab="copilot">Copilot</button>
+    </div>
+
+    <!-- Azure OpenAI -->
+    <div id="sectionAzure" class="provider-section active">
+      <div class="section">
+        <h3>Azure OpenAI</h3>
+        <label for="azureEndpoint">Endpoint</label>
+        <input id="azureEndpoint" type="text" placeholder="https://your-resource.openai.azure.com" />
+        <label for="azureApiKey">API Key</label>
+        <input id="azureApiKey" type="password" />
+        <label for="azureChatDeployment">Chat Deployment Name</label>
+        <input id="azureChatDeployment" type="text" placeholder="gpt-4o" />
+        <label for="azureEmbeddingDeployment">Embeddings Deployment Name</label>
+        <input id="azureEmbeddingDeployment" type="text" placeholder="text-embedding-3-small" />
+        <label for="azureApiVersion">API Version</label>
+        <input id="azureApiVersion" type="text" placeholder="2024-10-21" />
+      </div>
+    </div>
+
+    <!-- Anthropic -->
+    <div id="sectionAnthropic" class="provider-section">
+      <div class="section">
+        <h3>Anthropic (Claude)</h3>
+        <label for="anthropicApiKey">API Key</label>
+        <input id="anthropicApiKey" type="password" placeholder="sk-ant-..." />
+        <label for="anthropicModel">Model</label>
+        <select id="anthropicModel">
+          <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+          <option value="claude-opus-4-20250514">Claude Opus 4</option>
+          <option value="claude-haiku-4-20250506">Claude Haiku 4</option>
+          <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+          <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku</option>
+        </select>
+        <span class="hint">Anthropic does not offer an embeddings API. Use Azure or Copilot for the embedding provider above.</span>
+      </div>
+    </div>
+
+    <!-- Copilot / OpenAI-compatible -->
+    <div id="sectionCopilot" class="provider-section">
+      <div class="section">
+        <h3>Microsoft Copilot / OpenAI-compatible</h3>
+        <span class="hint">Works with Azure AI Model Inference, GitHub Models, OpenAI API, or any OpenAI-compatible endpoint.</span>
+        <label for="copilotEndpoint">Endpoint</label>
+        <input id="copilotEndpoint" type="text" placeholder="https://models.inference.ai.azure.com/v1" />
+        <label for="copilotApiKey">API Key</label>
+        <input id="copilotApiKey" type="password" />
+        <label for="copilotChatModel">Chat Model</label>
+        <input id="copilotChatModel" type="text" placeholder="gpt-4o" />
+        <label for="copilotEmbeddingModel">Embedding Model</label>
+        <input id="copilotEmbeddingModel" type="text" placeholder="text-embedding-3-small" />
+      </div>
+    </div>
+
+    <!-- Common settings -->
+    <fieldset>
+      <legend>General</legend>
+      <label for="maxCharsPerPage">Max Chars Per Page</label>
+      <input id="maxCharsPerPage" type="number" />
+      <label for="maxConcurrency">Max Concurrency</label>
+      <input id="maxConcurrency" type="number" />
+    </fieldset>
+
+    <button id="saveBtn" style="margin-top:16px; padding: 10px 24px; font-size: 14px;">Save Settings</button>
     <span id="result" class="small"></span>
     <script type="module" src="./dist/options/index.js"></script>
   </body>
-  </html>
-
+</html>

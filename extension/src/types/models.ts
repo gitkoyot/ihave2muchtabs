@@ -65,12 +65,35 @@ export interface PageLink {
   createdAt: number;
 }
 
+export type LlmProviderType = "azure_openai" | "anthropic" | "copilot";
+export type EmbeddingProviderType = "azure_openai" | "copilot";
+
 export interface AzureOpenAISettings {
   endpoint: string;
   apiKey: string;
   chatDeployment: string;
   embeddingDeployment: string;
   apiVersion: string;
+}
+
+export interface AnthropicSettings {
+  apiKey: string;
+  model: string;
+}
+
+export interface CopilotSettings {
+  endpoint: string;
+  apiKey: string;
+  chatModel: string;
+  embeddingModel: string;
+}
+
+export interface LlmSettings {
+  provider: LlmProviderType;
+  embeddingProvider: EmbeddingProviderType;
+  azure: AzureOpenAISettings;
+  anthropic: AnthropicSettings;
+  copilot: CopilotSettings;
   maxCharsPerPage: number;
   maxConcurrency: number;
 }

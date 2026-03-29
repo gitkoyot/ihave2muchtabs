@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS } from "../settings/settings";
-import type { AzureOpenAISettings } from "../types/models";
+import type { LlmSettings } from "../types/models";
 import { sendRuntimeMessage } from "../utils/runtime";
 
 function byId<T extends HTMLElement>(id: string): T {
@@ -10,26 +10,76 @@ function byId<T extends HTMLElement>(id: string): T {
   return el as T;
 }
 
-function readForm(): AzureOpenAISettings {
+function readForm(): LlmSettings {
   return {
-    endpoint: byId<HTMLInputElement>("endpoint").value.trim(),
-    apiKey: byId<HTMLInputElement>("apiKey").value.trim(),
-    chatDeployment: byId<HTMLInputElement>("chatDeployment").value.trim(),
-    embeddingDeployment: byId<HTMLInputElement>("embeddingDeployment").value.trim(),
-    apiVersion: byId<HTMLInputElement>("apiVersion").value.trim() || DEFAULT_SETTINGS.apiVersion,
+    provider: byId<HTMLSelectElement>("provider").value as LlmSettings["provider"],
+    embeddingProvider: byId<HTMLSelectElement>("embeddingProvider").value as LlmSettings["embeddingProvider"],
+    azure: {
+      endpoint: byId<HTMLInputElement>("azureEndpoint").value.trim(),
+      apiKey: byId<HTMLInputElement>("azureApiKey").value.trim(),
+      chatDeployment: byId<HTMLInputElement>("azureChatDeployment").value.trim(),
+      embeddingDeployment: byId<HTMLInputElement>("azureEmbeddingDeployment").value.trim(),
+      apiVersion: byId<HTMLInputElement>("azureApiVersion").value.trim() || DEFAULT_SETTINGS.azure.apiVersion
+    },
+    anthropic: {
+      apiKey: byId<HTMLInputElement>("anthropicApiKey").value.trim(),
+      model: byId<HTMLSelectElement>("anthropicModel").value
+    },
+    copilot: {
+      endpoint: byId<HTMLInputElement>("copilotEndpoint").value.trim(),
+      apiKey: byId<HTMLInputElement>("copilotApiKey").value.trim(),
+      chatModel: byId<HTMLInputElement>("copilotChatModel").value.trim(),
+      embeddingModel: byId<HTMLInputElement>("copilotEmbeddingModel").value.trim()
+    },
     maxCharsPerPage: Number(byId<HTMLInputElement>("maxCharsPerPage").value || DEFAULT_SETTINGS.maxCharsPerPage),
     maxConcurrency: Number(byId<HTMLInputElement>("maxConcurrency").value || DEFAULT_SETTINGS.maxConcurrency)
   };
 }
 
-function writeForm(settings: AzureOpenAISettings): void {
-  byId<HTMLInputElement>("endpoint").value = settings.endpoint;
-  byId<HTMLInputElement>("apiKey").value = settings.apiKey;
-  byId<HTMLInputElement>("chatDeployment").value = settings.chatDeployment;
-  byId<HTMLInputElement>("embeddingDeployment").value = settings.embeddingDeployment;
-  byId<HTMLInputElement>("apiVersion").value = settings.apiVersion;
+function writeForm(settings: LlmSettings): void {
+  byId<HTMLSelectElement>("provider").value = settings.provider;
+  byId<HTMLSelectElement>("embeddingProvider").value = settings.embeddingProvider;
+
+  byId<HTMLInputElement>("azureEndpoint").value = settings.azure.endpoint;
+  byId<HTMLInputElement>("azureApiKey").value = settings.azure.apiKey;
+  byId<HTMLInputElement>("azureChatDeployment").value = settings.azure.chatDeployment;
+  byId<HTMLInputElement>("azureEmbeddingDeployment").value = settings.azure.embeddingDeployment;
+  byId<HTMLInputElement>("azureApiVersion").value = settings.azure.apiVersion;
+
+  byId<HTMLInputElement>("anthropicApiKey").value = settings.anthropic.apiKey;
+  byId<HTMLSelectElement>("anthropicModel").value = settings.anthropic.model;
+
+  byId<HTMLInputElement>("copilotEndpoint").value = settings.copilot.endpoint;
+  byId<HTMLInputElement>("copilotApiKey").value = settings.copilot.apiKey;
+  byId<HTMLInputElement>("copilotChatModel").value = settings.copilot.chatModel;
+  byId<HTMLInputElement>("copilotEmbeddingModel").value = settings.copilot.embeddingModel;
+
   byId<HTMLInputElement>("maxCharsPerPage").value = String(settings.maxCharsPerPage);
   byId<HTMLInputElement>("maxConcurrency").value = String(settings.maxConcurrency);
+}
+
+function setupTabs(): void {
+  const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>(".tab-bar button"));
+  const sections: Record<string, HTMLElement> = {
+    azure: byId("sectionAzure"),
+    anthropic: byId("sectionAnthropic"),
+    copilot: byId("sectionCopilot")
+  };
+
+  for (const tab of tabs) {
+    tab.addEventListener("click", () => {
+      const target = tab.dataset.tab;
+      if (!target) return;
+
+      for (const t of tabs) t.classList.remove("active");
+      tab.classList.add("active");
+
+      for (const key of Object.keys(sections)) {
+        const section = sections[key];
+        if (section) section.classList.toggle("active", key === target);
+      }
+    });
+  }
 }
 
 async function loadPage(): Promise<void> {
@@ -58,6 +108,7 @@ async function savePage(): Promise<void> {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
+  setupTabs();
   byId<HTMLButtonElement>("saveBtn").addEventListener("click", () => void savePage());
   void loadPage();
 });
