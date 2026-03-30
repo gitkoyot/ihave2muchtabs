@@ -66,7 +66,9 @@ HTTP 401/403 responses produce `"restricted"` status (not a user error). Empty e
 - **Chat** (summaries + Q&A): `azure_openai`, `anthropic`, `ollama`
 - **Embeddings** (vector search): `azure_openai` or `ollama` only — Anthropic has no embeddings API
 
-Each provider has its own client file in `src/llm/`. All share prompt templates (`prompts.ts`) and strict JSON response validators (`validators.ts`).
+Each provider has its own client file in `src/llm/`. All share prompt templates (`prompts.ts`) and strict JSON response validators (`validators.ts`). `checkConnection()` in `llmProvider.ts` tests both chat and embedding connectivity and returns `{ chat: string; embedding: string }` ("ok" or error message).
+
+**Ollama note:** Chrome extensions need CORS allowed. Ollama must be started with `OLLAMA_ORIGINS="chrome-extension://*"` env var, otherwise requests get 403.
 
 `LlmSettings` has nested provider-specific configs (`azure`, `anthropic`, `ollama`). Legacy `AzureOpenAISettings` are auto-migrated on load in `settings.ts`. Settings are stored in `chrome.storage.local` under the key `llm_settings`. Default limits: `maxCharsPerPage: 12000`, `maxConcurrency: 2`.
 
@@ -111,6 +113,10 @@ Debug logs are stored in `chrome.storage.local` under `debug_logs` (300-entry ci
 ### TypeScript Strictness
 
 `tsconfig.json` enables `strict: true`, `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes`. The service worker runs without DOM — use regex or string operations, not browser APIs like `DOMParser` or `document`.
+
+### UI Style
+
+All pages (popup, options, dashboard) use a consistent dark theme with CSS custom properties (`--bg`, `--surface`, `--border`, `--accent`, etc.). When modifying or adding UI, match the existing dark palette.
 
 ### Entry Points (esbuild)
 
