@@ -25,11 +25,10 @@ function readForm(): LlmSettings {
       apiKey: byId<HTMLInputElement>("anthropicApiKey").value.trim(),
       model: byId<HTMLSelectElement>("anthropicModel").value
     },
-    copilot: {
-      endpoint: byId<HTMLInputElement>("copilotEndpoint").value.trim(),
-      apiKey: byId<HTMLInputElement>("copilotApiKey").value.trim(),
-      chatModel: byId<HTMLInputElement>("copilotChatModel").value.trim(),
-      embeddingModel: byId<HTMLInputElement>("copilotEmbeddingModel").value.trim()
+    ollama: {
+      endpoint: byId<HTMLInputElement>("ollamaEndpoint").value.trim() || DEFAULT_SETTINGS.ollama.endpoint,
+      chatModel: byId<HTMLInputElement>("ollamaChatModel").value.trim(),
+      embeddingModel: byId<HTMLInputElement>("ollamaEmbeddingModel").value.trim()
     },
     maxCharsPerPage: Number(byId<HTMLInputElement>("maxCharsPerPage").value || DEFAULT_SETTINGS.maxCharsPerPage),
     maxConcurrency: Number(byId<HTMLInputElement>("maxConcurrency").value || DEFAULT_SETTINGS.maxConcurrency)
@@ -49,10 +48,9 @@ function writeForm(settings: LlmSettings): void {
   byId<HTMLInputElement>("anthropicApiKey").value = settings.anthropic.apiKey;
   byId<HTMLSelectElement>("anthropicModel").value = settings.anthropic.model;
 
-  byId<HTMLInputElement>("copilotEndpoint").value = settings.copilot.endpoint;
-  byId<HTMLInputElement>("copilotApiKey").value = settings.copilot.apiKey;
-  byId<HTMLInputElement>("copilotChatModel").value = settings.copilot.chatModel;
-  byId<HTMLInputElement>("copilotEmbeddingModel").value = settings.copilot.embeddingModel;
+  byId<HTMLInputElement>("ollamaEndpoint").value = settings.ollama.endpoint;
+  byId<HTMLInputElement>("ollamaChatModel").value = settings.ollama.chatModel;
+  byId<HTMLInputElement>("ollamaEmbeddingModel").value = settings.ollama.embeddingModel;
 
   byId<HTMLInputElement>("maxCharsPerPage").value = String(settings.maxCharsPerPage);
   byId<HTMLInputElement>("maxConcurrency").value = String(settings.maxConcurrency);
@@ -63,7 +61,7 @@ function setupTabs(): void {
   const sections: Record<string, HTMLElement> = {
     azure: byId("sectionAzure"),
     anthropic: byId("sectionAnthropic"),
-    copilot: byId("sectionCopilot")
+    ollama: byId("sectionOllama")
   };
 
   for (const tab of tabs) {

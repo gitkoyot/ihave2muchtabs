@@ -17,11 +17,10 @@ export const DEFAULT_SETTINGS: LlmSettings = {
     apiKey: "",
     model: "claude-sonnet-4-20250514"
   },
-  copilot: {
-    endpoint: "",
-    apiKey: "",
-    chatModel: "",
-    embeddingModel: ""
+  ollama: {
+    endpoint: "http://localhost:11434",
+    chatModel: "llama3.1",
+    embeddingModel: "nomic-embed-text"
   },
   maxCharsPerPage: 12000,
   maxConcurrency: 2
@@ -58,7 +57,17 @@ export async function loadSettings(): Promise<LlmSettings | null> {
   const data = await chrome.storage.local.get([SETTINGS_KEY, LEGACY_KEY]);
 
   if (data[SETTINGS_KEY]) {
-    return data[SETTINGS_KEY] as LlmSettings;
+    const saved = data[SETTINGS_KEY] as LlmSettings;
+    if ((saved.provider as string) === "copilot") {
+      saved.provider = "azure_openai";
+    }
+    if ((saved.embeddingProvider as string) === "copilot") {
+      saved.embeddingProvider = "azure_openai";
+    }
+    if (!saved.ollama) {
+      saved.ollama = DEFAULT_SETTINGS.ollama;
+    }
+    return saved;
   }
 
   if (data[LEGACY_KEY]) {

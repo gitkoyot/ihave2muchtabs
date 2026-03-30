@@ -1,7 +1,7 @@
 import type { AskAnswerResult, LlmSettings, SummaryResult } from "../types/models";
 import { generateSummary as azureSummary, generateEmbedding as azureEmbedding, answerQuery as azureAnswer } from "./azureOpenAIClient";
 import { generateSummary as anthropicSummary, answerQuery as anthropicAnswer } from "./anthropicClient";
-import { generateSummary as copilotSummary, generateEmbedding as copilotEmbedding, answerQuery as copilotAnswer } from "./copilotClient";
+import { generateSummary as ollamaSummary, generateEmbedding as ollamaEmbedding, answerQuery as ollamaAnswer } from "./ollamaClient";
 
 export interface ChatResult {
   result: SummaryResult;
@@ -28,8 +28,8 @@ export function generateSummary(settings: LlmSettings, input: SummaryInput): Pro
       return azureSummary(settings.azure, input);
     case "anthropic":
       return anthropicSummary(settings.anthropic, input);
-    case "copilot":
-      return copilotSummary(settings.copilot, input);
+    case "ollama":
+      return ollamaSummary(settings.ollama, input);
   }
 }
 
@@ -37,8 +37,8 @@ export function generateEmbedding(settings: LlmSettings, input: string): Promise
   switch (settings.embeddingProvider) {
     case "azure_openai":
       return azureEmbedding(settings.azure, input);
-    case "copilot":
-      return copilotEmbedding(settings.copilot, input);
+    case "ollama":
+      return ollamaEmbedding(settings.ollama, input);
   }
 }
 
@@ -52,7 +52,7 @@ export function answerQuery(
       return azureAnswer(settings.azure, question, retrievedRecordsJson);
     case "anthropic":
       return anthropicAnswer(settings.anthropic, question, retrievedRecordsJson);
-    case "copilot":
-      return copilotAnswer(settings.copilot, question, retrievedRecordsJson);
+    case "ollama":
+      return ollamaAnswer(settings.ollama, question, retrievedRecordsJson);
   }
 }

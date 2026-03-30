@@ -172,8 +172,8 @@ function hasUsableSettings(settings: LlmSettings | null): settings is LlmSetting
     case "anthropic":
       if (!settings.anthropic.apiKey || !settings.anthropic.model) return false;
       break;
-    case "copilot":
-      if (!settings.copilot.endpoint || !settings.copilot.apiKey || !settings.copilot.chatModel) return false;
+    case "ollama":
+      if (!settings.ollama.endpoint || !settings.ollama.chatModel) return false;
       break;
   }
 
@@ -181,8 +181,8 @@ function hasUsableSettings(settings: LlmSettings | null): settings is LlmSetting
     case "azure_openai":
       if (!settings.azure.endpoint || !settings.azure.apiKey || !settings.azure.embeddingDeployment || !settings.azure.apiVersion) return false;
       break;
-    case "copilot":
-      if (!settings.copilot.endpoint || !settings.copilot.apiKey || !settings.copilot.embeddingModel) return false;
+    case "ollama":
+      if (!settings.ollama.endpoint || !settings.ollama.embeddingModel) return false;
       break;
   }
 
@@ -193,14 +193,14 @@ function getChatModelLabel(settings: LlmSettings): string {
   switch (settings.provider) {
     case "azure_openai": return settings.azure.chatDeployment;
     case "anthropic": return settings.anthropic.model;
-    case "copilot": return settings.copilot.chatModel;
+    case "ollama": return settings.ollama.chatModel;
   }
 }
 
 function getEmbeddingModelLabel(settings: LlmSettings): string {
   switch (settings.embeddingProvider) {
     case "azure_openai": return settings.azure.embeddingDeployment;
-    case "copilot": return settings.copilot.embeddingModel;
+    case "ollama": return settings.ollama.embeddingModel;
   }
 }
 

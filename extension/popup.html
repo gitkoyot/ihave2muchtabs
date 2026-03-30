@@ -6,87 +6,102 @@
     <title>I Have 2 Much Tabs</title>
     <style>
       :root {
-        --bg: #f4f1ea;
-        --card: #fffdf8;
-        --ink: #1e1d1a;
-        --muted: #5d5a52;
-        --line: #ddd3c4;
-        --accent: #146c43;
-        --accent-2: #0b57d0;
+        --bg: #0f1117;
+        --surface: #1a1d27;
+        --surface-2: #232733;
+        --border: #2e3345;
+        --text: #e4e6ed;
+        --text-muted: #8b8fa3;
+        --accent: #6c8cff;
+        --accent-hover: #8ba3ff;
+        --green: #34d399;
+        --red: #f87171;
+        --yellow: #fbbf24;
+        --input-bg: #141722;
+        --radius: 10px;
       }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
       body {
-        font-family: Georgia, "Times New Roman", serif;
-        margin: 0;
-        width: 390px;
-        background: radial-gradient(circle at top right, #fff7d6, #f4f1ea 45%, #ece6db);
-        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        width: 380px;
+        background: var(--bg);
+        color: var(--text);
       }
-      .shell { padding: 12px; }
-      .card {
-        background: var(--card);
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        padding: 12px;
-        box-shadow: 0 6px 20px rgba(30, 29, 26, 0.06);
+      .shell { padding: 14px; }
+      .header {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 14px;
       }
-      .title { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
-      .title h1 { font-size: 16px; margin: 0; letter-spacing: .2px; }
-      .pill { font-size: 11px; color: var(--muted); border:1px solid var(--line); padding:2px 8px; border-radius:999px; }
-      select, input, button {
-        width: 100%;
-        margin-top: 8px;
-        padding: 9px 10px;
-        border-radius: 10px;
-        border: 1px solid var(--line);
-        background: white;
+      .header h1 { font-size: 15px; font-weight: 700; }
+      .pill {
+        font-size: 10px; color: var(--text-muted);
+        border: 1px solid var(--border); padding: 2px 8px;
+        border-radius: 999px; background: var(--surface);
       }
-      button { cursor: pointer; font-weight: 600; }
-      button.primary { background: var(--accent); color: white; border-color: var(--accent); }
-      button.secondary { background: #eef4ff; color: #14376b; border-color: #c8d8fb; }
-      button.warn { background: #fff2f0; color: #8a2f22; border-color: #f0c0ba; }
-      .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+      select, input {
+        width: 100%; margin-top: 8px; padding: 9px 12px;
+        border-radius: var(--radius); border: 1px solid var(--border);
+        background: var(--input-bg); color: var(--text);
+        font-size: 13px; outline: none; transition: border-color .15s;
+      }
+      select:focus, input:focus { border-color: var(--accent); }
+      option { background: var(--surface); }
+      button {
+        width: 100%; margin-top: 8px; padding: 9px 12px;
+        border-radius: var(--radius); border: 1px solid var(--border);
+        background: var(--surface); color: var(--text);
+        font-size: 13px; font-weight: 600; cursor: pointer;
+        transition: all .15s;
+      }
+      button:hover { background: var(--surface-2); border-color: var(--accent); }
+      button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+      button.primary:hover { background: var(--accent-hover); }
+      button.secondary { background: var(--surface-2); color: var(--accent); border-color: var(--border); }
+      button.warn { background: rgba(248,113,113,0.1); color: var(--red); border-color: rgba(248,113,113,0.3); }
+      button.warn:hover { background: rgba(248,113,113,0.2); }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+      .bar {
+        height: 6px; background: var(--surface-2); border-radius: 999px;
+        overflow: hidden; margin-top: 10px; border: 1px solid var(--border);
+      }
+      .bar > div {
+        height: 100%; width: 0%;
+        background: linear-gradient(90deg, var(--accent), var(--green));
+        transition: width .25s ease;
+      }
       .status {
-        font-size: 12px;
-        color: var(--ink);
-        white-space: pre-wrap;
-        margin-top: 10px;
-        background: #faf7f0;
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        padding: 10px;
-        line-height: 1.35;
+        font-size: 12px; color: var(--text-muted);
+        white-space: pre-wrap; margin-top: 10px;
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 10px; line-height: 1.4;
       }
-      .muted { color: var(--muted); font-size: 11px; margin-top: 8px; }
-      .bar { height: 8px; background:#ebe3d5; border-radius:999px; overflow:hidden; margin-top:8px; border:1px solid #dfd3c0; }
-      .bar > div { height:100%; width:0%; background: linear-gradient(90deg, var(--accent-2), var(--accent)); transition: width .25s ease; }
+      .muted { color: var(--text-muted); font-size: 11px; margin-top: 8px; text-align: center; }
     </style>
   </head>
   <body>
     <div class="shell">
-      <div class="card">
-        <div class="title">
-          <h1>I Have 2 Much Tabs</h1>
-          <span class="pill">v0.1.5</span>
-        </div>
-        <select id="scanScope">
-          <option value="all_tabs">All Open Tabs</option>
-          <option value="current_window">Current Window Tabs</option>
-        </select>
-        <button id="scanBtn" class="primary">Start Scan</button>
-        <div class="grid">
-          <button id="openDashboardBtn" class="secondary">Open Dashboard</button>
-          <button id="statsBtn">Refresh Status</button>
-          <button id="exportTxtBtn">Export TXT</button>
-          <button id="closeAnalyzedBtn" class="warn">Close Analyzed Tabs</button>
-        </div>
-        <input id="questionInput" placeholder="Ask your tab archive..." />
-        <button id="askBtn" class="secondary">Ask</button>
-        <div class="bar"><div id="progressBarFill"></div></div>
-        <div class="status" id="statusBox">Idle</div>
-        <div class="status" id="answerBox">Ask a question to see answer here.</div>
-        <div class="muted">Live status auto-refreshes while popup is open.</div>
+      <div class="header">
+        <h1>I Have 2 Much Tabs</h1>
+        <span class="pill">v0.1.15</span>
       </div>
+      <select id="scanScope">
+        <option value="all_tabs">All Open Tabs</option>
+        <option value="current_window">Current Window Tabs</option>
+      </select>
+      <button id="scanBtn" class="primary">Start Scan</button>
+      <div class="grid" style="margin-top:8px;">
+        <button id="openDashboardBtn" class="secondary">Open Dashboard</button>
+        <button id="statsBtn">Refresh Status</button>
+        <button id="exportTxtBtn">Export TXT</button>
+        <button id="closeAnalyzedBtn" class="warn">Close Analyzed</button>
+      </div>
+      <input id="questionInput" placeholder="Ask your tab archive..." />
+      <button id="askBtn" class="secondary">Ask</button>
+      <div class="bar"><div id="progressBarFill"></div></div>
+      <div class="status" id="statusBox">Idle</div>
+      <div class="status" id="answerBox">Ask a question to see answer here.</div>
+      <div class="muted">Live status auto-refreshes while popup is open.</div>
     </div>
     <script type="module" src="./dist/popup/index.js"></script>
   </body>
-  </html>
+</html>

@@ -65,8 +65,8 @@ export interface PageLink {
   createdAt: number;
 }
 
-export type LlmProviderType = "azure_openai" | "anthropic" | "copilot";
-export type EmbeddingProviderType = "azure_openai" | "copilot";
+export type LlmProviderType = "azure_openai" | "anthropic" | "ollama";
+export type EmbeddingProviderType = "azure_openai" | "ollama";
 
 export interface AzureOpenAISettings {
   endpoint: string;
@@ -81,9 +81,8 @@ export interface AnthropicSettings {
   model: string;
 }
 
-export interface CopilotSettings {
+export interface OllamaSettings {
   endpoint: string;
-  apiKey: string;
   chatModel: string;
   embeddingModel: string;
 }
@@ -93,7 +92,7 @@ export interface LlmSettings {
   embeddingProvider: EmbeddingProviderType;
   azure: AzureOpenAISettings;
   anthropic: AnthropicSettings;
-  copilot: CopilotSettings;
+  ollama: OllamaSettings;
   maxCharsPerPage: number;
   maxConcurrency: number;
 }
