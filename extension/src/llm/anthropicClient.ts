@@ -71,6 +71,22 @@ function extractJson(text: string): string {
   return jsonMatch[0];
 }
 
+export async function checkChat(settings: AnthropicSettings): Promise<void> {
+  const response = await fetch(ANTHROPIC_API_URL, {
+    method: "POST",
+    headers: headers(settings.apiKey),
+    body: JSON.stringify({
+      model: settings.model,
+      max_tokens: 5,
+      messages: [{ role: "user", content: "Hi" }]
+    })
+  });
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(`Anthropic check failed: ${response.status} ${errorText}`);
+  }
+}
+
 export async function generateSummary(
   settings: AnthropicSettings,
   input: { bookmarkTitle: string; url: string; pageTitle: string; contentText: string }

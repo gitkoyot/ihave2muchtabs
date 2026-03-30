@@ -1,7 +1,7 @@
 import type { AskAnswerResult, LlmSettings, SummaryResult } from "../types/models";
-import { generateSummary as azureSummary, generateEmbedding as azureEmbedding, answerQuery as azureAnswer } from "./azureOpenAIClient";
-import { generateSummary as anthropicSummary, answerQuery as anthropicAnswer } from "./anthropicClient";
-import { generateSummary as ollamaSummary, generateEmbedding as ollamaEmbedding, answerQuery as ollamaAnswer } from "./ollamaClient";
+import { generateSummary as azureSummary, generateEmbedding as azureEmbedding, answerQuery as azureAnswer, checkChat as azureCheckChat } from "./azureOpenAIClient";
+import { generateSummary as anthropicSummary, answerQuery as anthropicAnswer, checkChat as anthropicCheckChat } from "./anthropicClient";
+import { generateSummary as ollamaSummary, generateEmbedding as ollamaEmbedding, answerQuery as ollamaAnswer, checkChat as ollamaCheckChat } from "./ollamaClient";
 
 export interface ChatResult {
   result: SummaryResult;
@@ -40,6 +40,30 @@ export function generateEmbedding(settings: LlmSettings, input: string): Promise
     case "ollama":
       return ollamaEmbedding(settings.ollama, input);
   }
+}
+
+export async function checkConnection(settings: LlmSettings): Promise<{ chat: string; embedding: string }> {
+  let chat: string;
+  try {
+    switch (settings.provider) {
+      case "azure_openai": await azureCheckChat(settings.azure); break;
+      case "anthropic": await anthropicCheckChat(settings.anthropic); break;
+      case "ollama": await ollamaCheckChat(settings.ollama); break;
+    }
+    chat = "ok";
+  } catch (e) {
+    chat = e instanceof Error ? e.message : String(e);
+  }
+
+  let embedding: string;
+  try {
+    await generateEmbedding(settings, "test");
+    embedding = "ok";
+  } catch (e) {
+    embedding = e instanceof Error ? e.message : String(e);
+  }
+
+  return { chat, embedding };
 }
 
 export function answerQuery(

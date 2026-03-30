@@ -37,6 +37,32 @@ function extractJson(text: string): string {
   return jsonMatch[0];
 }
 
+function ollamaForbiddenError(): Error {
+  return new Error(
+    "403 Forbidden – Ollama blokuje żądania z rozszerzenia.\n" +
+    "Uruchom Ollamę poleceniem:\n" +
+    '$env:OLLAMA_ORIGINS="chrome-extension://*"; ollama serve'
+  );
+}
+
+export async function checkChat(settings: OllamaSettings): Promise<void> {
+  const response = await fetch(chatUrl(settings), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: settings.chatModel,
+      messages: [{ role: "user", content: "Hi" }],
+      stream: false,
+      options: { num_predict: 1 }
+    })
+  });
+  if (response.status === 403) throw ollamaForbiddenError();
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(`Ollama chat check failed: ${response.status} ${errorText}`);
+  }
+}
+
 export async function generateSummary(
   settings: OllamaSettings,
   input: { bookmarkTitle: string; url: string; pageTitle: string; contentText: string }
@@ -55,6 +81,7 @@ export async function generateSummary(
     })
   });
 
+  if (response.status === 403) throw ollamaForbiddenError();
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
     throw new Error(`Ollama chat summary failed: ${response.status} ${errorText}`);
@@ -83,6 +110,7 @@ export async function generateEmbedding(settings: OllamaSettings, input: string)
     })
   });
 
+  if (response.status === 403) throw ollamaForbiddenError();
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
     throw new Error(`Ollama embeddings failed: ${response.status} ${errorText}`);
@@ -115,6 +143,7 @@ export async function answerQuery(
     })
   });
 
+  if (response.status === 403) throw ollamaForbiddenError();
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
     throw new Error(`Ollama answer failed: ${response.status} ${errorText}`);

@@ -19,8 +19,8 @@ export const DEFAULT_SETTINGS: LlmSettings = {
   },
   ollama: {
     endpoint: "http://localhost:11434",
-    chatModel: "llama3.1",
-    embeddingModel: "nomic-embed-text"
+    chatModel: "llama3.1:latest",
+    embeddingModel: "nomic-embed-text:latest"
   },
   maxCharsPerPage: 12000,
   maxConcurrency: 2

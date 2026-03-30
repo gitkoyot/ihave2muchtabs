@@ -10,6 +10,12 @@ function byId<T extends HTMLElement>(id: string): T {
   return el as T;
 }
 
+function setResult(text: string, state: "ok" | "error" | "partial" | "info"): void {
+  const el = byId<HTMLDivElement>("result");
+  el.textContent = text;
+  el.className = state === "info" ? "visible" : `visible ${state}`;
+}
+
 function readForm(): LlmSettings {
   return {
     provider: byId<HTMLSelectElement>("provider").value as LlmSettings["provider"],
@@ -82,32 +88,49 @@ function setupTabs(): void {
 }
 
 async function loadPage(): Promise<void> {
-  const result = byId<HTMLSpanElement>("result");
   const response = await sendRuntimeMessage({ type: "GET_SETTINGS" });
   if (!response.ok) {
-    result.textContent = `Load failed: ${response.error}`;
+    setResult(`Load failed: ${response.error}`, "error");
     return;
   }
   if (response.type !== "SETTINGS") {
-    result.textContent = `Unexpected response: ${response.type}`;
+    setResult(`Unexpected response: ${response.type}`, "error");
     return;
   }
   writeForm(response.payload ?? DEFAULT_SETTINGS);
 }
 
-async function savePage(): Promise<void> {
-  const result = byId<HTMLSpanElement>("result");
-  result.textContent = "Saving...";
-  const response = await sendRuntimeMessage({ type: "SAVE_SETTINGS", payload: readForm() });
+async function checkConnectionPage(): Promise<void> {
+  setResult("Checking connection...", "info");
+  const response = await sendRuntimeMessage({ type: "CHECK_CONNECTION", payload: readForm() });
   if (!response.ok) {
-    result.textContent = `Save failed: ${response.error}`;
+    setResult(`Check failed: ${response.error}`, "error");
     return;
   }
-  result.textContent = response.type === "SETTINGS_SAVED" ? "Saved." : `Unexpected response: ${response.type}`;
+  if (response.type !== "CONNECTION_RESULT") return;
+  const { chat, embedding } = response.payload;
+  const chatOk = chat === "ok";
+  const embOk = embedding === "ok";
+  const chatLine = chatOk ? "✓ Chat: OK" : `✗ Chat: ${chat}`;
+  const embLine = embOk ? "✓ Embedding: OK" : `✗ Embedding: ${embedding}`;
+  const state = chatOk && embOk ? "ok" : chatOk || embOk ? "partial" : "error";
+  setResult(`${chatLine}\n${embLine}`, state);
+}
+
+async function savePage(): Promise<void> {
+  setResult("Saving...", "info");
+  const response = await sendRuntimeMessage({ type: "SAVE_SETTINGS", payload: readForm() });
+  if (!response.ok) {
+    setResult(`Save failed: ${response.error}`, "error");
+    return;
+  }
+  setResult(response.type === "SETTINGS_SAVED" ? "Settings saved." : `Unexpected response: ${response.type}`,
+    response.type === "SETTINGS_SAVED" ? "ok" : "error");
 }
 
 window.addEventListener("DOMContentLoaded", () => {
   setupTabs();
   byId<HTMLButtonElement>("saveBtn").addEventListener("click", () => void savePage());
+  byId<HTMLButtonElement>("checkBtn").addEventListener("click", () => void checkConnectionPage());
   void loadPage();
 });

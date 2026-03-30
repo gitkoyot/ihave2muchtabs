@@ -4,7 +4,7 @@ import { extractMainTextFromHtml } from "../extractor/contentExtractor";
 import { toExportRow, toJsonl } from "../export/jsonl";
 import { buildLlmFriendlyTxtExport } from "../export/txt";
 import { fetchPage } from "../fetcher/pageFetcher";
-import { generateSummary, generateEmbedding, answerQuery } from "../llm/llmProvider";
+import { generateSummary, generateEmbedding, answerQuery, checkConnection } from "../llm/llmProvider";
 import { PROMPT_VERSIONS } from "../llm/prompts";
 import { rankAnalysesBySimilarity } from "../search/retrieval";
 import { loadSettings, saveSettings } from "../settings/settings";
@@ -156,6 +156,18 @@ async function handleMessage(message: RuntimeRequest): Promise<RuntimeResponse> 
 
     case "GET_COST_METRICS":
       return await handleGetCostMetrics();
+
+    case "CHECK_CONNECTION": {
+      try {
+        const result = await checkConnection(message.payload);
+        await logInfo("check", "Connection check completed", result);
+        return { ok: true, type: "CONNECTION_RESULT", payload: result };
+      } catch (error) {
+        const details = error instanceof Error ? error.message : String(error);
+        await logError("check", "Connection check failed", { details });
+        return { ok: false, error: "Connection check failed", details };
+      }
+    }
 
     case "CLOSE_ANALYZED_TABS":
       return await handleCloseAnalyzedTabs(message.payload?.scope ?? "all_tabs", message.payload?.windowId);

@@ -8,8 +8,9 @@ desktop.ini
 .vscode/
 *.suo
 *.user
-*.userossc
-*.sln.docstates
+
+# Claude Code
+.claude/
 
 # Logs
 *.log
@@ -26,19 +27,11 @@ pnpm-debug.log*
 # Node
 node_modules/
 
-# Project build outputs
+# Build outputs
 dist/
-build/
-coverage/
 
-# Extension-specific
-extension/node_modules/
-extension/dist/
-
-# Runtime files
-*.pid
-*.seed
-*.pid.lock
+# Extension artifacts
+*.zip
 
 # Temporary files
 tmp/

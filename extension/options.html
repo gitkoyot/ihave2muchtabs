@@ -67,14 +67,28 @@
         padding: 16px 20px; margin-top: 20px; background: var(--surface);
       }
       legend { font-weight: 600; font-size: 13px; padding: 0 8px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-      #saveBtn {
-        margin-top: 24px; width: 100%; padding: 12px;
-        background: var(--accent); color: #fff; border: none;
+      .action-row {
+        display: flex; gap: 10px; margin-top: 24px;
+      }
+      #saveBtn, #checkBtn {
+        flex: 1; padding: 12px; border: none;
         border-radius: var(--radius); font-size: 15px; font-weight: 600;
         cursor: pointer; transition: background .15s;
       }
+      #saveBtn { background: var(--accent); color: #fff; }
       #saveBtn:hover { background: var(--accent-hover); }
-      #result { display: block; margin-top: 10px; color: var(--text-muted); font-size: 13px; text-align: center; }
+      #checkBtn { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+      #checkBtn:hover { background: var(--border); }
+      #result {
+        display: none; margin-top: 12px; padding: 12px 16px;
+        border-radius: var(--radius); font-size: 13px;
+        border: 1px solid var(--border); background: var(--surface-2);
+        color: var(--text-muted); white-space: pre-line; line-height: 1.6;
+      }
+      #result.visible { display: block; }
+      #result.ok { border-color: #3a7d44; background: #1a2e1e; color: #6fcf7f; }
+      #result.error { border-color: #7d3a3a; background: #2e1a1a; color: #cf6f6f; }
+      #result.partial { border-color: #7d6a2a; background: #2e281a; color: #cfb96f; }
     </style>
   </head>
   <body>
@@ -141,9 +155,9 @@
         <label for="ollamaEndpoint">Endpoint</label>
         <input id="ollamaEndpoint" type="text" placeholder="http://localhost:11434" />
         <label for="ollamaChatModel">Chat Model</label>
-        <input id="ollamaChatModel" type="text" placeholder="llama3.1" />
+        <input id="ollamaChatModel" type="text" placeholder="llama3.1:latest" />
         <label for="ollamaEmbeddingModel">Embedding Model</label>
-        <input id="ollamaEmbeddingModel" type="text" placeholder="nomic-embed-text" />
+        <input id="ollamaEmbeddingModel" type="text" placeholder="nomic-embed-text:latest" />
       </div>
     </div>
 
@@ -155,8 +169,11 @@
       <input id="maxConcurrency" type="number" />
     </fieldset>
 
-    <button id="saveBtn">Save Settings</button>
-    <span id="result"></span>
+    <div class="action-row">
+      <button id="saveBtn">Save Settings</button>
+      <button id="checkBtn">Check Connection</button>
+    </div>
+    <div id="result"></div>
     <script type="module" src="./dist/options/index.js"></script>
   </body>
 </html>

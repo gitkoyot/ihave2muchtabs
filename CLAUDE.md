@@ -37,6 +37,8 @@ The extension uses Chrome's `runtime.onMessage` for all communication between UI
 - Message types are defined in `src/types/messages.ts`
 - Helper: `src/utils/runtime.ts` wraps `chrome.runtime.sendMessage`
 
+Responses are either `{ ok: true; type: string; payload: T }` or `{ ok: false; error: string; details?: string }`.
+
 ### Processing Pipeline
 
 ```
@@ -46,40 +48,69 @@ Popup (START_SCAN) → tabScanner.ts → saveTabRecords()
                                          ↓
                               pageFetcher.ts → contentExtractor.ts
                                          ↓
-                              llmProvider.ts → [azure | anthropic | copilot]
+                              llmProvider.ts → [azure | anthropic | ollama]
                                          ↓
                               savePageAnalysis() + savePageDocument() + savePageLinks()
 ```
 
 Status lifecycle per tab: `pending → processing → done | failed | restricted`
 
+`runtimeStatus` tracks global state: `"idle" | "scanning" | "analyzing_X_tabs" | "waiting_for_settings"`. `activeAnalysisPromise` acts as a mutex to prevent concurrent analysis loops. Worker pool size is `min(10, max(1, settings.maxConcurrency))` (default: 2).
+
+HTTP 401/403 responses produce `"restricted"` status (not a user error). Empty extracted text produces `"failed"`.
+
 ### Multi-Provider LLM Abstraction
 
 `src/llm/llmProvider.ts` routes calls based on `settings.provider` and `settings.embeddingProvider`:
 
-- **Chat** (summaries + Q&A): Azure OpenAI, Anthropic Claude, or Copilot/OpenAI-compatible
-- **Embeddings** (vector search): Azure OpenAI or Copilot only (Anthropic has no embeddings API)
+- **Chat** (summaries + Q&A): `azure_openai`, `anthropic`, `ollama`
+- **Embeddings** (vector search): `azure_openai` or `ollama` only — Anthropic has no embeddings API
 
-Each provider has its own client file in `src/llm/`. All share the same prompt templates (`prompts.ts`) and response validators (`validators.ts`).
+Each provider has its own client file in `src/llm/`. All share prompt templates (`prompts.ts`) and strict JSON response validators (`validators.ts`).
 
-Settings type is `LlmSettings` with nested provider-specific configs (`azure`, `anthropic`, `copilot`). Legacy `AzureOpenAISettings` are auto-migrated on load in `settings.ts`.
+`LlmSettings` has nested provider-specific configs (`azure`, `anthropic`, `ollama`). Legacy `AzureOpenAISettings` are auto-migrated on load in `settings.ts`. Settings are stored in `chrome.storage.local` under the key `llm_settings`. Default limits: `maxCharsPerPage: 12000`, `maxConcurrency: 2`.
+
+LLM responses are validated to typed shapes:
+- **SummaryResult**: `summary_short`, `summary_detailed`, `why_relevant`, `tags[]`, `topics[]`, `technologies[]`, `confidence`
+- **AskAnswerResult**: `answer`, `matched_urls[]`, `related_urls[]`, `confidence`
 
 ### Storage Layer
 
-- **IndexedDB** via `src/storage/db.ts`: stores `tab_captures`, `page_documents`, `page_analyses`, `page_links`, `query_history`
-- **Repository pattern** (`src/storage/repository.ts`): all DB access goes through typed functions like `saveTabRecords()`, `listKnowledgeRows()`
-- **chrome.storage.local**: LLM provider credentials and settings (key: `llm_settings`)
+**IndexedDB** (`iHave2MuchTabsKnowledgeDb`, v1) via `src/storage/db.ts` with 6 stores:
+
+| Store | Key indices |
+|-------|-------------|
+| `tab_captures` | `by_url` (unique), `by_status`, `by_window`, `by_updated_at` |
+| `page_documents` | `by_canonical_url` (unique), `by_domain`, `by_last_seen_at` |
+| `page_analyses` | `by_record_id` (unique), `by_document_id`, `by_final_url`, `by_fetch_status`; multientry: `by_tags`, `by_topics`, `by_technologies` |
+| `page_links` | `by_document_id`, `by_to_url` |
+| `query_history` | `by_created_at` |
+| `scan_jobs` | `by_status`, `by_started_at` |
+
+All DB access goes through typed repository functions in `src/storage/repository.ts` (e.g., `saveTabRecords()`, `listKnowledgeRows()`).
+
+Debug logs are stored in `chrome.storage.local` under `debug_logs` (300-entry circular buffer, scoped by level: debug/info/warn/error).
 
 ### Semantic Search Flow (ASK_QUERY)
 
 1. Embed the question via the configured embedding provider
-2. `rankAnalysesBySimilarity()` scores all analyzed pages using cosine similarity (`src/search/vector.ts`)
+2. `rankAnalysesBySimilarity()` scores all analyzed pages by cosine similarity (`src/search/vector.ts`)
 3. Top 8 results passed as context to the chat provider
 4. Response includes answer, matched_urls, related_urls, confidence
 
+### Content Extraction
+
+`src/extractor/contentExtractor.ts` uses **regex-based HTML stripping** (no DOMParser — service workers have no DOM). It removes `<script>`, `<style>`, `<noscript>` tags, decodes HTML entities, extracts the page title from `<title>`, and collects up to 200 links from `<a href>` (excluding fragments, `javascript:`, `mailto:`). Page fetch uses a 15s timeout and tracks the final redirected URL.
+
+### Export & Cost
+
+- **JSONL export** (`src/export/jsonl.ts`): schema `tab_knowledge.v2`, one JSON object per line including embeddings
+- **TXT export** (`src/export/txt.ts`): human/LLM-readable with numbered records, sections for summary/topics/tags/technologies/links
+- **Cost estimation**: summed token usage across all analyses and queries, priced at $5/M input + $15/M output tokens (Azure OpenAI rates)
+
 ### TypeScript Strictness
 
-`tsconfig.json` enables `strict: true`, `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes`. The service worker runs in a context without DOM — content extraction uses regex-based HTML stripping, not DOMParser.
+`tsconfig.json` enables `strict: true`, `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes`. The service worker runs without DOM — use regex or string operations, not browser APIs like `DOMParser` or `document`.
 
 ### Entry Points (esbuild)
 

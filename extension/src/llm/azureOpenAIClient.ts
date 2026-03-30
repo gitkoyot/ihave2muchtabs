@@ -88,6 +88,20 @@ export async function generateEmbedding(settings: AzureOpenAISettings, input: st
   return embedding;
 }
 
+export async function checkChat(settings: AzureOpenAISettings): Promise<void> {
+  const response = await fetch(chatUrl(settings), {
+    method: "POST",
+    headers: headers(settings.apiKey),
+    body: JSON.stringify({
+      messages: [{ role: "user", content: "Hi" }],
+      max_tokens: 1
+    })
+  });
+  if (!response.ok) {
+    throw new Error(`Azure chat check failed: ${response.status}`);
+  }
+}
+
 export async function answerQuery(
   settings: AzureOpenAISettings,
   question: string,
