@@ -1,4 +1,5 @@
 import { sendRuntimeMessage } from "../utils/runtime";
+import { api } from "../utils/browser-api";
 
 function byId<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -54,7 +55,7 @@ async function startScan(): Promise<void> {
   const box = byId<HTMLDivElement>("statusBox");
   box.textContent = "Starting scan...";
   const scope = byId<HTMLSelectElement>("scanScope").value as "all_tabs" | "current_window";
-  const currentWindow = await chrome.windows.getCurrent();
+  const currentWindow = await api.windows.getCurrent();
   const payload =
     typeof currentWindow.id === "number"
       ? ({ scope, windowId: currentWindow.id } as const)
@@ -108,7 +109,7 @@ async function closeAnalyzedTabs(): Promise<void> {
     return;
   }
 
-  const currentWindow = await chrome.windows.getCurrent();
+  const currentWindow = await api.windows.getCurrent();
   const payload =
     typeof currentWindow.id === "number"
       ? ({ scope, windowId: currentWindow.id } as const)
@@ -180,10 +181,10 @@ function asNumber(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-window.addEventListener("DOMContentLoaded", () => {
+function initPopup(): void {
   byId<HTMLButtonElement>("scanBtn").addEventListener("click", () => void startScan());
   byId<HTMLButtonElement>("openDashboardBtn").addEventListener("click", () => {
-    window.open(chrome.runtime.getURL("dashboard.html"), "_blank");
+    window.open(api.runtime.getURL("dashboard.html"), "_blank");
   });
   byId<HTMLButtonElement>("closeAnalyzedBtn").addEventListener("click", () => void closeAnalyzedTabs());
   byId<HTMLButtonElement>("statsBtn").addEventListener("click", () => void refreshStatus());
@@ -193,4 +194,7 @@ window.addEventListener("DOMContentLoaded", () => {
   window.setInterval(() => {
     void refreshStatus();
   }, 2000);
-});
+}
+
+// type="module" scripts are deferred — DOM is always ready when this runs
+initPopup();

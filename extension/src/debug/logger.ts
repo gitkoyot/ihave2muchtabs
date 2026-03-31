@@ -1,3 +1,5 @@
+import { api } from "../utils/browser-api";
+
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
 export interface DebugLogEntry {
@@ -35,10 +37,10 @@ function stringifyData(data: unknown): string | undefined {
 
 async function appendLog(entry: DebugLogEntry): Promise<void> {
   try {
-    const existing = await chrome.storage.local.get(DEBUG_LOGS_KEY);
+    const existing = await api.storage.local.get(DEBUG_LOGS_KEY);
     const logs = ((existing[DEBUG_LOGS_KEY] as DebugLogEntry[] | undefined) ?? []).slice(-(MAX_LOG_ENTRIES - 1));
     logs.push(entry);
-    await chrome.storage.local.set({ [DEBUG_LOGS_KEY]: logs });
+    await api.storage.local.set({ [DEBUG_LOGS_KEY]: logs });
   } catch (error) {
     console.error("Failed to persist debug log", error);
   }
@@ -81,10 +83,10 @@ async function log(level: LogLevel, scope: string, message: string, data?: unkno
 }
 
 export async function getDebugLogs(): Promise<DebugLogEntry[]> {
-  const data = await chrome.storage.local.get(DEBUG_LOGS_KEY);
+  const data = await api.storage.local.get(DEBUG_LOGS_KEY);
   return ((data[DEBUG_LOGS_KEY] as DebugLogEntry[] | undefined) ?? []).slice();
 }
 
 export async function clearDebugLogs(): Promise<void> {
-  await chrome.storage.local.set({ [DEBUG_LOGS_KEY]: [] });
+  await api.storage.local.set({ [DEBUG_LOGS_KEY]: [] });
 }

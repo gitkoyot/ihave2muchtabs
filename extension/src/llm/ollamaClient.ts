@@ -1,4 +1,5 @@
 import type { AskAnswerResult, OllamaSettings, SummaryResult } from "../types/models";
+import { api } from "../utils/browser-api";
 import {
   ANSWER_SYSTEM_PROMPT,
   SUMMARY_SYSTEM_PROMPT,
@@ -15,6 +16,10 @@ interface OllamaChatResponse {
 
 interface OllamaEmbeddingsResponse {
   embeddings?: number[][];
+}
+
+interface OllamaTagsResponse {
+  models?: Array<{ name: string }>;
 }
 
 function normalizeEndpoint(endpoint: string): string {
@@ -37,12 +42,53 @@ function extractJson(text: string): string {
   return jsonMatch[0];
 }
 
-function ollamaForbiddenError(): Error {
+async function fetchAvailableModels(endpoint: string): Promise<string> {
+  try {
+    const res = await fetch(`${normalizeEndpoint(endpoint)}/api/tags`);
+    if (!res.ok) return "(failed to fetch model list)";
+    const data = (await res.json()) as OllamaTagsResponse;
+    const names = data.models?.map((m) => m.name) ?? [];
+    return names.length > 0 ? names.join(", ") : "(no installed models found)";
+  } catch {
+    return "(failed to fetch model list)";
+  }
+}
+
+async function ollama404Error(endpoint: string, requestedModel: string): Promise<Error> {
+  const available = await fetchAvailableModels(endpoint);
   return new Error(
-    "403 Forbidden – Ollama blokuje żądania z rozszerzenia.\n" +
-    "Uruchom Ollamę poleceniem:\n" +
-    '$env:OLLAMA_ORIGINS="chrome-extension://*"; ollama serve'
+    `Model "${requestedModel}" was not found in Ollama.\n` +
+    `Available models: ${available}\n` +
+    `Install it with: ollama pull ${requestedModel}`
   );
+}
+
+function getExtensionOriginPattern(): string {
+  const extensionUrl = api.runtime.getURL("");
+  if (extensionUrl.startsWith("moz-extension://")) {
+    return "moz-extension://*";
+  }
+  return "chrome-extension://*";
+}
+
+function ollamaForbiddenError(): Error {
+  const originPattern = getExtensionOriginPattern();
+  return new Error(
+    "403 Forbidden - Ollama is blocking requests from this extension.\n" +
+    `Allow the current browser extension origin and restart Ollama:\n` +
+    `$env:OLLAMA_ORIGINS="${originPattern}"; ollama serve`
+  );
+}
+
+export async function listModels(settings: OllamaSettings): Promise<string[]> {
+  const res = await fetch(`${normalizeEndpoint(settings.endpoint)}/api/tags`);
+  if (res.status === 403) throw ollamaForbiddenError();
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Ollama /api/tags failed: ${res.status} ${text}`);
+  }
+  const data = (await res.json()) as OllamaTagsResponse;
+  return data.models?.map((m) => m.name) ?? [];
 }
 
 export async function checkChat(settings: OllamaSettings): Promise<void> {
@@ -57,6 +103,7 @@ export async function checkChat(settings: OllamaSettings): Promise<void> {
     })
   });
   if (response.status === 403) throw ollamaForbiddenError();
+  if (response.status === 404) throw await ollama404Error(settings.endpoint, settings.chatModel);
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
     throw new Error(`Ollama chat check failed: ${response.status} ${errorText}`);
@@ -82,6 +129,7 @@ export async function generateSummary(
   });
 
   if (response.status === 403) throw ollamaForbiddenError();
+  if (response.status === 404) throw await ollama404Error(settings.endpoint, settings.chatModel);
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
     throw new Error(`Ollama chat summary failed: ${response.status} ${errorText}`);
@@ -111,6 +159,7 @@ export async function generateEmbedding(settings: OllamaSettings, input: string)
   });
 
   if (response.status === 403) throw ollamaForbiddenError();
+  if (response.status === 404) throw await ollama404Error(settings.endpoint, settings.embeddingModel);
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
     throw new Error(`Ollama embeddings failed: ${response.status} ${errorText}`);
@@ -144,6 +193,7 @@ export async function answerQuery(
   });
 
   if (response.status === 403) throw ollamaForbiddenError();
+  if (response.status === 404) throw await ollama404Error(settings.endpoint, settings.chatModel);
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
     throw new Error(`Ollama answer failed: ${response.status} ${errorText}`);

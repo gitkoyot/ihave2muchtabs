@@ -102,19 +102,47 @@ async function loadPage(): Promise<void> {
 
 async function checkConnectionPage(): Promise<void> {
   setResult("Checking connection...", "info");
-  const response = await sendRuntimeMessage({ type: "CHECK_CONNECTION", payload: readForm() });
-  if (!response.ok) {
-    setResult(`Check failed: ${response.error}`, "error");
-    return;
+  try {
+    const response = await sendRuntimeMessage({ type: "CHECK_CONNECTION", payload: readForm() });
+    if (!response.ok) {
+      setResult(`Check failed: ${response.error}`, "error");
+      return;
+    }
+    if (response.type !== "CONNECTION_RESULT") {
+      setResult(`Unexpected response: ${response.type}`, "error");
+      return;
+    }
+    const { chat, embedding } = response.payload;
+    const chatOk = chat === "ok";
+    const embOk = embedding === "ok";
+    const chatLine = chatOk ? "✓ Chat: OK" : `✗ Chat: ${chat}`;
+    const embLine = embOk ? "✓ Embedding: OK" : `✗ Embedding: ${embedding}`;
+    const state = chatOk && embOk ? "ok" : chatOk || embOk ? "partial" : "error";
+    setResult(`${chatLine}\n${embLine}`, state);
+  } catch (err) {
+    setResult(`Error: ${err instanceof Error ? err.message : String(err)}`, "error");
   }
-  if (response.type !== "CONNECTION_RESULT") return;
-  const { chat, embedding } = response.payload;
-  const chatOk = chat === "ok";
-  const embOk = embedding === "ok";
-  const chatLine = chatOk ? "✓ Chat: OK" : `✗ Chat: ${chat}`;
-  const embLine = embOk ? "✓ Embedding: OK" : `✗ Embedding: ${embedding}`;
-  const state = chatOk && embOk ? "ok" : chatOk || embOk ? "partial" : "error";
-  setResult(`${chatLine}\n${embLine}`, state);
+}
+
+async function listModelsPage(): Promise<void> {
+  setResult("Loading model list...", "info");
+  try {
+    const response = await sendRuntimeMessage({ type: "LIST_MODELS", payload: readForm() });
+    if (!response.ok) {
+      setResult(`Error: ${response.error}`, "error");
+      return;
+    }
+    if (response.type !== "MODELS_LIST") {
+      setResult(`Unexpected response: ${response.type}`, "error");
+      return;
+    }
+    const { chat, embedding } = response.payload;
+    const chatLine = `Chat (${byId<HTMLSelectElement>("provider").value}):\n  ${chat.join("\n  ")}`;
+    const embLine = `Embedding (${byId<HTMLSelectElement>("embeddingProvider").value}):\n  ${embedding.join("\n  ")}`;
+    setResult(`${chatLine}\n\n${embLine}`, "ok");
+  } catch (err) {
+    setResult(`Error: ${err instanceof Error ? err.message : String(err)}`, "error");
+  }
 }
 
 async function savePage(): Promise<void> {
@@ -128,9 +156,13 @@ async function savePage(): Promise<void> {
     response.type === "SETTINGS_SAVED" ? "ok" : "error");
 }
 
-window.addEventListener("DOMContentLoaded", () => {
+function initOptions(): void {
   setupTabs();
   byId<HTMLButtonElement>("saveBtn").addEventListener("click", () => void savePage());
   byId<HTMLButtonElement>("checkBtn").addEventListener("click", () => void checkConnectionPage());
+  byId<HTMLButtonElement>("listModelsBtn").addEventListener("click", () => void listModelsPage());
   void loadPage();
-});
+}
+
+// type="module" scripts are deferred — DOM is always ready when this runs
+initOptions();

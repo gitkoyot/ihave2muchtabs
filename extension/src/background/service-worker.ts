@@ -4,7 +4,7 @@ import { extractMainTextFromHtml } from "../extractor/contentExtractor";
 import { toExportRow, toJsonl } from "../export/jsonl";
 import { buildLlmFriendlyTxtExport } from "../export/txt";
 import { fetchPage } from "../fetcher/pageFetcher";
-import { generateSummary, generateEmbedding, answerQuery, checkConnection } from "../llm/llmProvider";
+import { generateSummary, generateEmbedding, answerQuery, checkConnection, listModels } from "../llm/llmProvider";
 import { PROMPT_VERSIONS } from "../llm/prompts";
 import { rankAnalysesBySimilarity } from "../search/retrieval";
 import { loadSettings, saveSettings } from "../settings/settings";
@@ -25,16 +25,17 @@ import type { LlmSettings, PageAnalysis, TabRecord } from "../types/models";
 import type { RuntimeRequest, RuntimeResponse } from "../types/messages";
 import { sha256Hex } from "../utils/hash";
 import { makeId } from "../utils/id";
+import { api } from "../utils/browser-api";
 
 let runtimeStatus = "idle";
 let activeAnalysisPromise: Promise<void> | null = null;
 
-chrome.runtime.onInstalled.addListener(() => {
+api.runtime.onInstalled.addListener(() => {
   runtimeStatus = "ready";
   void logInfo("sw", "Extension installed, service worker ready");
 });
 
-chrome.runtime.onMessage.addListener(
+api.runtime.onMessage.addListener(
   (
     message: RuntimeRequest,
     _sender: chrome.runtime.MessageSender,
@@ -114,7 +115,7 @@ async function handleMessage(message: RuntimeRequest): Promise<RuntimeResponse> 
         const dataUrl = `data:application/x-ndjson;charset=utf-8,${encodeURIComponent(jsonl)}`;
         const filename = `bookmark-knowledge-export-${new Date().toISOString().replace(/[:.]/g, "-")}.jsonl`;
 
-        await chrome.downloads.download({ url: dataUrl, filename, saveAs: true });
+        await api.downloads.download({ url: dataUrl, filename, saveAs: true });
         await logInfo("export", "JSONL export completed", { filename, rows: exportRows.length });
         return { ok: true, type: "EXPORT_DONE", payload: { filename } };
       } catch (error) {
@@ -131,7 +132,7 @@ async function handleMessage(message: RuntimeRequest): Promise<RuntimeResponse> 
         const text = buildLlmFriendlyTxtExport(rows, exportedAt);
         const dataUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(text)}`;
         const filename = `tab-knowledge-export-${new Date().toISOString().replace(/[:.]/g, "-")}.txt`;
-        await chrome.downloads.download({ url: dataUrl, filename, saveAs: true });
+        await api.downloads.download({ url: dataUrl, filename, saveAs: true });
         await logInfo("export", "TXT export completed", { filename });
         return { ok: true, type: "EXPORT_TXT_DONE", payload: { filename } };
       } catch (error) {
@@ -166,6 +167,16 @@ async function handleMessage(message: RuntimeRequest): Promise<RuntimeResponse> 
         const details = error instanceof Error ? error.message : String(error);
         await logError("check", "Connection check failed", { details });
         return { ok: false, error: "Connection check failed", details };
+      }
+    }
+
+    case "LIST_MODELS": {
+      try {
+        const result = await listModels(message.payload);
+        return { ok: true, type: "MODELS_LIST", payload: result };
+      } catch (error) {
+        const details = error instanceof Error ? error.message : String(error);
+        return { ok: false, error: "List models failed", details };
       }
     }
 
@@ -511,7 +522,7 @@ async function handleCloseAnalyzedTabs(
 
   const queryInfo: chrome.tabs.QueryInfo =
     scope === "current_window" && typeof windowId === "number" ? { windowId } : {};
-  const openTabs = await chrome.tabs.query(queryInfo);
+  const openTabs = await api.tabs.query(queryInfo);
   const closableTabIds: number[] = [];
 
   for (const tab of openTabs) {
@@ -525,7 +536,7 @@ async function handleCloseAnalyzedTabs(
   }
 
   if (closableTabIds.length > 0) {
-    await chrome.tabs.remove(closableTabIds);
+    await api.tabs.remove(closableTabIds);
   }
   await logInfo("close", "Closed analyzed tabs", {
     scope,

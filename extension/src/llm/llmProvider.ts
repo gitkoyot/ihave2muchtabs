@@ -1,7 +1,7 @@
 import type { AskAnswerResult, LlmSettings, SummaryResult } from "../types/models";
 import { generateSummary as azureSummary, generateEmbedding as azureEmbedding, answerQuery as azureAnswer, checkChat as azureCheckChat } from "./azureOpenAIClient";
-import { generateSummary as anthropicSummary, answerQuery as anthropicAnswer, checkChat as anthropicCheckChat } from "./anthropicClient";
-import { generateSummary as ollamaSummary, generateEmbedding as ollamaEmbedding, answerQuery as ollamaAnswer, checkChat as ollamaCheckChat } from "./ollamaClient";
+import { generateSummary as anthropicSummary, answerQuery as anthropicAnswer, checkChat as anthropicCheckChat, listModels as anthropicListModels } from "./anthropicClient";
+import { generateSummary as ollamaSummary, generateEmbedding as ollamaEmbedding, answerQuery as ollamaAnswer, checkChat as ollamaCheckChat, listModels as ollamaListModels } from "./ollamaClient";
 
 export interface ChatResult {
   result: SummaryResult;
@@ -40,6 +40,41 @@ export function generateEmbedding(settings: LlmSettings, input: string): Promise
     case "ollama":
       return ollamaEmbedding(settings.ollama, input);
   }
+}
+
+export async function listModels(settings: LlmSettings): Promise<{ chat: string[]; embedding: string[] }> {
+  let chat: string[];
+  try {
+    switch (settings.provider) {
+      case "azure_openai":
+        chat = ["(Azure: check your deployments in the Azure portal)"];
+        break;
+      case "anthropic":
+        chat = await anthropicListModels(settings.anthropic);
+        break;
+      case "ollama":
+        chat = await ollamaListModels(settings.ollama);
+        break;
+    }
+  } catch (e) {
+    chat = [`Error: ${e instanceof Error ? e.message : String(e)}`];
+  }
+
+  let embedding: string[];
+  try {
+    switch (settings.embeddingProvider) {
+      case "azure_openai":
+        embedding = ["(Azure: check your deployments in the Azure portal)"];
+        break;
+      case "ollama":
+        embedding = await ollamaListModels(settings.ollama);
+        break;
+    }
+  } catch (e) {
+    embedding = [`Error: ${e instanceof Error ? e.message : String(e)}`];
+  }
+
+  return { chat, embedding };
 }
 
 export async function checkConnection(settings: LlmSettings): Promise<{ chat: string; embedding: string }> {

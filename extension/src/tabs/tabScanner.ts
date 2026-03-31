@@ -1,7 +1,11 @@
 import type { TabRecord } from "../types/models";
 import { makeId } from "../utils/id";
+import { api } from "../utils/browser-api";
 
-function isSupportedUrl(url: string): boolean {
+export function isSupportedUrl(url: unknown): boolean {
+  if (typeof url !== "string" || url === "") {
+    return false;
+  }
   return url.startsWith("http://") || url.startsWith("https://");
 }
 
@@ -10,7 +14,7 @@ export async function scanOpenTabs(options?: { scope?: "all_tabs" | "current_win
     options?.scope === "current_window" && typeof options.windowId === "number"
       ? { windowId: options.windowId }
       : {};
-  const tabs = await chrome.tabs.query(queryInfo);
+  const tabs = await api.tabs.query(queryInfo);
   const seenUrls = new Set<string>();
   const now = Date.now();
   const records: TabRecord[] = [];

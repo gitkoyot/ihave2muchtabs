@@ -1,4 +1,5 @@
 import type { LlmSettings } from "../types/models";
+import { api } from "../utils/browser-api";
 
 const SETTINGS_KEY = "llm_settings";
 const LEGACY_KEY = "azure_openai_settings";
@@ -54,7 +55,7 @@ function migrateLegacy(legacy: LegacyAzureSettings): LlmSettings {
 }
 
 export async function loadSettings(): Promise<LlmSettings | null> {
-  const data = await chrome.storage.local.get([SETTINGS_KEY, LEGACY_KEY]);
+  const data = await api.storage.local.get([SETTINGS_KEY, LEGACY_KEY]);
 
   if (data[SETTINGS_KEY]) {
     const saved = data[SETTINGS_KEY] as LlmSettings;
@@ -72,8 +73,8 @@ export async function loadSettings(): Promise<LlmSettings | null> {
 
   if (data[LEGACY_KEY]) {
     const migrated = migrateLegacy(data[LEGACY_KEY] as LegacyAzureSettings);
-    await chrome.storage.local.set({ [SETTINGS_KEY]: migrated });
-    await chrome.storage.local.remove(LEGACY_KEY);
+    await api.storage.local.set({ [SETTINGS_KEY]: migrated });
+    await api.storage.local.remove(LEGACY_KEY);
     return migrated;
   }
 
@@ -81,5 +82,5 @@ export async function loadSettings(): Promise<LlmSettings | null> {
 }
 
 export async function saveSettings(settings: LlmSettings): Promise<void> {
-  await chrome.storage.local.set({ [SETTINGS_KEY]: settings });
+  await api.storage.local.set({ [SETTINGS_KEY]: settings });
 }

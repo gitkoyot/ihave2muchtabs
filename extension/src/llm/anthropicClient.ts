@@ -71,6 +71,22 @@ function extractJson(text: string): string {
   return jsonMatch[0];
 }
 
+interface AnthropicModelsResponse {
+  data?: Array<{ id: string }>;
+}
+
+export async function listModels(settings: AnthropicSettings): Promise<string[]> {
+  const response = await fetch("https://api.anthropic.com/v1/models", {
+    headers: headers(settings.apiKey)
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`Anthropic models failed: ${response.status} ${text}`);
+  }
+  const data = (await response.json()) as AnthropicModelsResponse;
+  return data.data?.map((m) => m.id) ?? [];
+}
+
 export async function checkChat(settings: AnthropicSettings): Promise<void> {
   const response = await fetch(ANTHROPIC_API_URL, {
     method: "POST",

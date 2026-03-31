@@ -106,7 +106,7 @@ async function renderCostMetrics(): Promise<void> {
   ].join("\n");
 }
 
-window.addEventListener("DOMContentLoaded", () => {
+function initDashboard(): void {
   byId<HTMLButtonElement>("refreshBtn").addEventListener("click", () => void renderRows());
   byId<HTMLButtonElement>("exportBtn").addEventListener("click", async () => {
     const statsLine = byId<HTMLParagraphElement>("statsLine");
@@ -153,4 +153,7 @@ window.addEventListener("DOMContentLoaded", () => {
     void renderRows();
     void renderCostMetrics();
   }, 2500);
-});
+}
+
+// type="module" scripts are deferred — DOM is always ready when this runs
+initDashboard();

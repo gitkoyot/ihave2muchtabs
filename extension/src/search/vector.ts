@@ -10,7 +10,11 @@ export function cosineSimilarity(a: number[], b: number[]): number {
   for (let i = 0; i < a.length; i += 1) {
     const av = a[i];
     const bv = b[i];
-    if (av === undefined || bv === undefined) {
+    if (av === undefined || bv === undefined || av === null || bv === null) {
+      return -1;
+    }
+    // Handle NaN and Infinity
+    if (Number.isNaN(av) || Number.isNaN(bv) || Number.isFinite(av) === false || Number.isFinite(bv) === false) {
       return -1;
     }
     dot += av * bv;
