@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Chrome Extension (Manifest V3) that converts open browser tabs into a local, AI-searchable knowledge base. Scans tabs, fetches page content, generates summaries and embeddings via LLM providers, stores everything in IndexedDB, and enables semantic Q&A across archived tabs.
+Chrome/Firefox/Edge Extension (Manifest V3) that converts open browser tabs into a local, AI-searchable knowledge base. Scans tabs, fetches page content, generates summaries and embeddings via LLM providers, stores everything in IndexedDB, and enables semantic Q&A across archived tabs.
 
 ## Build & Development Commands
 
@@ -12,15 +12,20 @@ All commands run from `extension/` directory:
 
 ```bash
 cd extension
-npm install          # install dependencies
-npm run build        # esbuild bundle (4 entry points → dist/)
-npm run watch        # rebuild on file changes
-npm run typecheck    # tsc --noEmit (strict mode)
+npm install              # install dependencies
+npm run build            # esbuild bundle for Chrome (4 entry points → dist/)
+npm run build:firefox    # build for Firefox
+npm run build:all        # build Chrome + Firefox + Edge
+npm run watch            # rebuild on file changes (Chrome)
+npm run typecheck        # tsc --noEmit (strict mode)
+npm run test             # vitest run (all tests)
+npx vitest run test/vector.test.ts  # run single test file
+npm run package:chrome   # build + ZIP for Chrome
+npm run package:firefox  # build + ZIP for Firefox
+npm run package:all      # build + ZIP both
 ```
 
-Load the extension in Chrome via `chrome://extensions` → "Load unpacked" → select the `extension/` folder.
-
-No test framework is set up yet.
+Load unpacked in Chrome via `chrome://extensions` → select `extension/` folder. For Firefox, use `about:debugging` → "Load Temporary Add-on" → select any file in `extension/.build/firefox/`.
 
 ## Project Rules
 
@@ -38,6 +43,14 @@ The extension uses Chrome's `runtime.onMessage` for all communication between UI
 - Helper: `src/utils/runtime.ts` wraps `chrome.runtime.sendMessage`
 
 Responses are either `{ ok: true; type: string; payload: T }` or `{ ok: false; error: string; details?: string }`.
+
+### Cross-Browser Support
+
+Build script (`scripts/build.mjs`) generates browser-specific manifests:
+- **Chrome/Edge**: `service_worker` with `type: "module"`
+- **Firefox**: `scripts` array + `browser_specific_settings.gecko`
+
+`src/utils/browser-api.ts` exports `api` — resolves `globalThis.browser ?? globalThis.chrome` for cross-browser compatibility. All code uses `api.*` instead of `chrome.*` directly.
 
 ### Processing Pipeline
 
@@ -66,11 +79,15 @@ HTTP 401/403 responses produce `"restricted"` status (not a user error). Empty e
 - **Chat** (summaries + Q&A): `azure_openai`, `anthropic`, `ollama`
 - **Embeddings** (vector search): `azure_openai` or `ollama` only — Anthropic has no embeddings API
 
-Each provider has its own client file in `src/llm/`. All share prompt templates (`prompts.ts`) and strict JSON response validators (`validators.ts`). `checkConnection()` in `llmProvider.ts` tests both chat and embedding connectivity and returns `{ chat: string; embedding: string }` ("ok" or error message).
+Each provider has its own client file in `src/llm/`. All share prompt templates (`prompts.ts`) and strict JSON response validators (`validators.ts`).
 
-**Ollama note:** Chrome extensions need CORS allowed. Ollama must be started with `OLLAMA_ORIGINS="chrome-extension://*"` env var, otherwise requests get 403.
+Provider utilities in `llmProvider.ts`:
+- `checkConnection()` — tests chat + embedding connectivity, returns `{ chat: string; embedding: string }` ("ok" or error)
+- `listModels()` — fetches available models from provider (Azure returns placeholder, Anthropic/Ollama query API)
 
-`LlmSettings` has nested provider-specific configs (`azure`, `anthropic`, `ollama`). Legacy `AzureOpenAISettings` are auto-migrated on load in `settings.ts`. Settings are stored in `chrome.storage.local` under the key `llm_settings`. Default limits: `maxCharsPerPage: 12000`, `maxConcurrency: 2`.
+**Ollama note:** Browser extensions need CORS allowed. Ollama must be started with `OLLAMA_ORIGINS="chrome-extension://*"` (or `moz-extension://*` for Firefox). The client auto-detects the correct origin pattern and shows a helpful error on 403.
+
+`LlmSettings` has nested provider-specific configs (`azure`, `anthropic`, `ollama`). Legacy settings are auto-migrated on load in `settings.ts`. Settings stored in `chrome.storage.local` under key `llm_settings`. Defaults: `maxCharsPerPage: 12000`, `maxConcurrency: 2`.
 
 LLM responses are validated to typed shapes:
 - **SummaryResult**: `summary_short`, `summary_detailed`, `why_relevant`, `tags[]`, `topics[]`, `technologies[]`, `confidence`
@@ -110,13 +127,23 @@ Debug logs are stored in `chrome.storage.local` under `debug_logs` (300-entry ci
 - **TXT export** (`src/export/txt.ts`): human/LLM-readable with numbered records, sections for summary/topics/tags/technologies/links
 - **Cost estimation**: summed token usage across all analyses and queries, priced at $5/M input + $15/M output tokens (Azure OpenAI rates)
 
+### Testing
+
+Vitest with Node environment. Tests in `extension/test/`. Setup file (`test/test-setup.ts`) mocks `chrome`/`browser` APIs globally.
+
+```bash
+npm run test                          # all tests
+npx vitest run test/vector.test.ts    # single file
+npx vitest --coverage                 # with coverage (v8 provider)
+```
+
 ### TypeScript Strictness
 
 `tsconfig.json` enables `strict: true`, `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes`. The service worker runs without DOM — use regex or string operations, not browser APIs like `DOMParser` or `document`.
 
 ### UI Style
 
-All pages (popup, options, dashboard) use a consistent dark theme with CSS custom properties (`--bg`, `--surface`, `--border`, `--accent`, etc.). When modifying or adding UI, match the existing dark palette.
+All pages (popup, options, dashboard) use a consistent dark theme with CSS custom properties (`--bg`, `--surface`, `--border`, `--accent`, etc.). When modifying or adding UI, match the existing dark palette. Version placeholder `__EXTENSION_VERSION__` in HTML is replaced at build time.
 
 ### Entry Points (esbuild)
 

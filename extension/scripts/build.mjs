@@ -253,7 +253,7 @@ if (watchMode) {
   await ctx.watch();
   console.log(`Watching... (target: ${targetArg})`);
 } else {
-  writeManifest(targetArg);
+  writeManifest("chrome");
   await build(config);
 
   if (packageMode) {

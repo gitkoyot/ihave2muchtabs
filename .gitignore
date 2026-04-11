@@ -26,9 +26,12 @@ pnpm-debug.log*
 
 # Node
 node_modules/
+.vitest/
 
 # Build outputs
 dist/
+coverage/
+.build/
 
 # Extension artifacts
 *.zip
