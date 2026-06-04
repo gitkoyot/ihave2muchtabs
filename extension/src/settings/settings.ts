@@ -18,7 +18,7 @@ export const DEFAULT_SETTINGS: LlmSettings = {
     apiKey: "",
     model: "claude-sonnet-4-20250514"
   },
-  ollama: {
+  local: {
     endpoint: "http://localhost:11434",
     chatModel: "llama3.1:latest",
     embeddingModel: "nomic-embed-text:latest"
@@ -58,16 +58,27 @@ export async function loadSettings(): Promise<LlmSettings | null> {
   const data = await api.storage.local.get([SETTINGS_KEY, LEGACY_KEY]);
 
   if (data[SETTINGS_KEY]) {
-    const saved = data[SETTINGS_KEY] as LlmSettings;
+    const saved = data[SETTINGS_KEY] as LlmSettings & { ollama?: LlmSettings["local"] };
     if ((saved.provider as string) === "copilot") {
       saved.provider = "azure_openai";
     }
     if ((saved.embeddingProvider as string) === "copilot") {
       saved.embeddingProvider = "azure_openai";
     }
-    if (!saved.ollama) {
-      saved.ollama = DEFAULT_SETTINGS.ollama;
+    // Migrate the former "ollama" provider/field to the generic "local" model.
+    if ((saved.provider as string) === "ollama") {
+      saved.provider = "local";
     }
+    if ((saved.embeddingProvider as string) === "ollama") {
+      saved.embeddingProvider = "local";
+    }
+    if (!saved.local && saved.ollama) {
+      saved.local = saved.ollama;
+    }
+    if (!saved.local) {
+      saved.local = DEFAULT_SETTINGS.local;
+    }
+    delete saved.ollama;
     return saved;
   }
 

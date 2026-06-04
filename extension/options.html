@@ -99,20 +99,20 @@
     <select id="provider">
       <option value="azure_openai">Azure OpenAI</option>
       <option value="anthropic">Anthropic (Claude)</option>
-      <option value="ollama">Ollama (Local)</option>
+      <option value="local">Local model (Ollama / LM Studio)</option>
     </select>
 
     <label for="embeddingProvider">Embedding Provider</label>
     <select id="embeddingProvider">
       <option value="azure_openai">Azure OpenAI</option>
-      <option value="ollama">Ollama (Local)</option>
+      <option value="local">Local model (Ollama / LM Studio)</option>
     </select>
-    <span class="hint">Anthropic does not provide embeddings. Use Azure or Ollama for vector search.</span>
+    <span class="hint">Anthropic does not provide embeddings. Use Azure or a local model for vector search.</span>
 
     <div class="tab-bar">
       <button type="button" id="tabAzure" class="active" data-tab="azure">Azure OpenAI</button>
       <button type="button" id="tabAnthropic" data-tab="anthropic">Anthropic</button>
-      <button type="button" id="tabOllama" data-tab="ollama">Ollama</button>
+      <button type="button" id="tabLocal" data-tab="local">Local model</button>
     </div>
 
     <div id="sectionAzure" class="provider-section active">
@@ -148,16 +148,16 @@
       </div>
     </div>
 
-    <div id="sectionOllama" class="provider-section">
+    <div id="sectionLocal" class="provider-section">
       <div class="section">
-        <h3>Ollama (Local)</h3>
-        <span class="hint">Runs locally via Ollama. No API key needed. Make sure Ollama is running.</span>
-        <label for="ollamaEndpoint">Endpoint</label>
-        <input id="ollamaEndpoint" type="text" placeholder="http://localhost:11434" />
-        <label for="ollamaChatModel">Chat Model</label>
-        <input id="ollamaChatModel" type="text" placeholder="llama3.1:latest" />
-        <label for="ollamaEmbeddingModel">Embedding Model</label>
-        <input id="ollamaEmbeddingModel" type="text" placeholder="nomic-embed-text:latest" />
+        <h3>Local model (Ollama / LM Studio)</h3>
+        <span class="hint">Any local server with an OpenAI-compatible API. No API key needed. Ollama default: http://localhost:11434 - LM Studio default: http://localhost:1234 (start its local server). The endpoint is the base URL; /v1 is added automatically.</span>
+        <label for="localEndpoint">Endpoint</label>
+        <input id="localEndpoint" type="text" placeholder="http://localhost:11434 or http://localhost:1234" />
+        <label for="localChatModel">Chat Model</label>
+        <input id="localChatModel" type="text" placeholder="llama3.1:latest" />
+        <label for="localEmbeddingModel">Embedding Model</label>
+        <input id="localEmbeddingModel" type="text" placeholder="nomic-embed-text:latest" />
       </div>
     </div>
 

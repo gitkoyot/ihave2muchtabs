@@ -185,45 +185,68 @@ async function handleMessage(message: RuntimeRequest): Promise<RuntimeResponse> 
   }
 }
 
-function hasUsableSettings(settings: LlmSettings | null): settings is LlmSettings {
-  if (!settings) return false;
+/**
+ * Returns a human-readable reason why the settings are unusable, or null if they are fine.
+ * Used to produce actionable log messages instead of a silent "waiting_for_settings".
+ */
+function describeSettingsProblem(settings: LlmSettings | null): string | null {
+  if (!settings) {
+    return "No settings saved yet - open the extension options, configure a provider, and click Save.";
+  }
 
+  const missing: string[] = [];
   switch (settings.provider) {
     case "azure_openai":
-      if (!settings.azure.endpoint || !settings.azure.apiKey || !settings.azure.chatDeployment || !settings.azure.apiVersion) return false;
+      if (!settings.azure.endpoint) missing.push("Azure endpoint");
+      if (!settings.azure.apiKey) missing.push("Azure API key");
+      if (!settings.azure.chatDeployment) missing.push("Azure chat deployment");
+      if (!settings.azure.apiVersion) missing.push("Azure API version");
       break;
     case "anthropic":
-      if (!settings.anthropic.apiKey || !settings.anthropic.model) return false;
+      if (!settings.anthropic.apiKey) missing.push("Anthropic API key");
+      if (!settings.anthropic.model) missing.push("Anthropic model");
       break;
-    case "ollama":
-      if (!settings.ollama.endpoint || !settings.ollama.chatModel) return false;
+    case "local":
+      if (!settings.local.endpoint) missing.push("local model endpoint");
+      if (!settings.local.chatModel) missing.push("local chat model");
       break;
   }
 
   switch (settings.embeddingProvider) {
     case "azure_openai":
-      if (!settings.azure.endpoint || !settings.azure.apiKey || !settings.azure.embeddingDeployment || !settings.azure.apiVersion) return false;
+      if (!settings.azure.endpoint) missing.push("Azure endpoint (embeddings)");
+      if (!settings.azure.apiKey) missing.push("Azure API key (embeddings)");
+      if (!settings.azure.embeddingDeployment) missing.push("Azure embedding deployment");
+      if (!settings.azure.apiVersion) missing.push("Azure API version (embeddings)");
       break;
-    case "ollama":
-      if (!settings.ollama.endpoint || !settings.ollama.embeddingModel) return false;
+    case "local":
+      if (!settings.local.endpoint) missing.push("local model endpoint (embeddings)");
+      if (!settings.local.embeddingModel) missing.push("local embedding model");
       break;
   }
 
-  return true;
+  if (missing.length > 0) {
+    return `Incomplete config for chat provider "${settings.provider}" / embedding provider "${settings.embeddingProvider}". Missing: ${missing.join(", ")}. Open options and Save.`;
+  }
+  return null;
+}
+
+function hasUsableSettings(settings: LlmSettings | null): settings is LlmSettings {
+  return describeSettingsProblem(settings) === null;
 }
 
 function getChatModelLabel(settings: LlmSettings): string {
   switch (settings.provider) {
     case "azure_openai": return settings.azure.chatDeployment;
     case "anthropic": return settings.anthropic.model;
-    case "ollama": return settings.ollama.chatModel;
+    case "local": return settings.local.chatModel;
   }
 }
 
 function getEmbeddingModelLabel(settings: LlmSettings): string {
   switch (settings.embeddingProvider) {
     case "azure_openai": return settings.azure.embeddingDeployment;
-    case "ollama": return settings.ollama.embeddingModel;
+    case "local": return settings.local.embeddingModel;
   }
 }
 
@@ -239,9 +262,10 @@ async function ensureAnalysisLoop(): Promise<void> {
 
 async function runPendingAnalysisLoop(): Promise<void> {
   const settings = await loadSettings();
-  if (!hasUsableSettings(settings)) {
+  const settingsProblem = describeSettingsProblem(settings);
+  if (settingsProblem || !settings) {
     runtimeStatus = "waiting_for_settings";
-    await logWarn("analysis", "Analysis loop blocked: LLM settings missing or incomplete");
+    await logWarn("analysis", `Analysis loop blocked: ${settingsProblem ?? "settings unavailable"}`);
     return;
   }
 
@@ -249,9 +273,15 @@ async function runPendingAnalysisLoop(): Promise<void> {
   const pending = records.filter((r) => r.processingStatus === "pending");
   if (pending.length === 0) {
     runtimeStatus = "idle";
-    await logDebug("analysis", "No pending tabs to analyze");
+    await logDebug("analysis", "No pending tabs to analyze", { totalRecords: records.length });
     return;
   }
+
+  await logInfo("analysis", "Settings OK, beginning analysis", {
+    pendingCount: pending.length,
+    chatProvider: settings.provider,
+    embeddingProvider: settings.embeddingProvider
+  });
 
   runtimeStatus = `analyzing_${pending.length}_tabs`;
   const concurrency = Math.max(1, Math.min(10, settings.maxConcurrency || 2));
@@ -342,12 +372,14 @@ async function processBookmarkRecord(
       chars: truncatedText.length
     });
 
+    const summaryStartedAt = Date.now();
     const summary = await generateSummary(settings, {
       bookmarkTitle: record.tabTitle,
       url: record.url,
       pageTitle: extracted.pageTitle,
       contentText: truncatedText
     });
+    const generationMs = Date.now() - summaryStartedAt;
     await logDebug("analysis.item", "Summary generated", {
       recordId: record.id,
       tags: summary.result.tags,
@@ -403,6 +435,7 @@ async function processBookmarkRecord(
       promptVersion: PROMPT_VERSIONS.summary,
       tokenUsageIn: summary.tokenUsageIn,
       tokenUsageOut: summary.tokenUsageOut,
+      generationMs,
       analysisVersion: 1,
       createdAt: Date.now()
     };
@@ -444,9 +477,10 @@ async function handleAskQuery(question: string): Promise<RuntimeResponse> {
   }
 
   const settings = await loadSettings();
-  if (!hasUsableSettings(settings)) {
-    await logWarn("ask", "ASK_QUERY blocked: LLM settings missing");
-    return { ok: false, error: "LLM settings are missing or incomplete" };
+  const settingsProblem = describeSettingsProblem(settings);
+  if (settingsProblem || !settings) {
+    await logWarn("ask", `ASK_QUERY blocked: ${settingsProblem ?? "settings unavailable"}`);
+    return { ok: false, error: settingsProblem ?? "LLM settings are missing or incomplete" };
   }
 
   const [tabs, analyses] = await Promise.all([listTabRecords(), listPageAnalyses()]);
@@ -556,11 +590,10 @@ async function handleGetCostMetrics(): Promise<RuntimeResponse> {
 
   const scanTokenIn = analyses.reduce((sum, a) => sum + (a.tokenUsageIn ?? 0), 0);
   const scanTokenOut = analyses.reduce((sum, a) => sum + (a.tokenUsageOut ?? 0), 0);
+  const totalGenerationMs = analyses.reduce((sum, a) => sum + (a.generationMs ?? 0), 0);
+  const tokensPerSecond = totalGenerationMs > 0 ? (scanTokenOut / (totalGenerationMs / 1000)) : 0;
   const queryTokenIn = queries.reduce((sum, q) => sum + (q.tokenUsageIn ?? 0), 0);
   const queryTokenOut = queries.reduce((sum, q) => sum + (q.tokenUsageOut ?? 0), 0);
-
-  const estimatedScanUsd = estimateUsd(scanTokenIn, scanTokenOut);
-  const estimatedQueryUsd = estimateUsd(queryTokenIn, queryTokenOut);
 
   return {
     ok: true,
@@ -570,21 +603,13 @@ async function handleGetCostMetrics(): Promise<RuntimeResponse> {
         analyzedPages: analyses.length,
         tokenIn: scanTokenIn,
         tokenOut: scanTokenOut,
-        estimatedUsd: estimatedScanUsd
+        tokensPerSecond: Math.round(tokensPerSecond * 10) / 10
       },
       query: {
         count: queries.length,
         tokenIn: queryTokenIn,
-        tokenOut: queryTokenOut,
-        estimatedUsd: estimatedQueryUsd
+        tokenOut: queryTokenOut
       }
     }
   };
-}
-
-function estimateUsd(tokenIn: number, tokenOut: number): number {
-  const inputPerMillion = 5;
-  const outputPerMillion = 15;
-  const usd = (tokenIn / 1_000_000) * inputPerMillion + (tokenOut / 1_000_000) * outputPerMillion;
-  return Math.round(usd * 10000) / 10000;
 }

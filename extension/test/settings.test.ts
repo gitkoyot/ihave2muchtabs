@@ -27,14 +27,14 @@ describe("settings", () => {
     await expect(loadSettings()).resolves.toBeNull();
   });
 
-  it("normalizes legacy copilot provider values and fills missing ollama settings", async () => {
+  it("normalizes legacy copilot provider values and fills missing local settings", async () => {
     const { DEFAULT_SETTINGS, loadSettings } = await import("../src/settings/settings");
     get.mockResolvedValue({
       llm_settings: {
         ...DEFAULT_SETTINGS,
         provider: "copilot",
         embeddingProvider: "copilot",
-        ollama: undefined
+        local: undefined
       }
     });
 
@@ -42,7 +42,30 @@ describe("settings", () => {
 
     expect(result?.provider).toBe("azure_openai");
     expect(result?.embeddingProvider).toBe("azure_openai");
-    expect(result?.ollama).toEqual(DEFAULT_SETTINGS.ollama);
+    expect(result?.local).toEqual(DEFAULT_SETTINGS.local);
+  });
+
+  it("migrates the former ollama provider and field to local", async () => {
+    const { loadSettings } = await import("../src/settings/settings");
+    const localCfg = { endpoint: "http://localhost:1234", chatModel: "qwen", embeddingModel: "nomic" };
+    get.mockResolvedValue({
+      llm_settings: {
+        provider: "ollama",
+        embeddingProvider: "ollama",
+        azure: { endpoint: "", apiKey: "", chatDeployment: "", embeddingDeployment: "", apiVersion: "2024-10-21" },
+        anthropic: { apiKey: "", model: "claude-sonnet-4-20250514" },
+        ollama: localCfg,
+        maxCharsPerPage: 12000,
+        maxConcurrency: 2
+      }
+    });
+
+    const result = await loadSettings();
+
+    expect(result?.provider).toBe("local");
+    expect(result?.embeddingProvider).toBe("local");
+    expect(result?.local).toEqual(localCfg);
+    expect((result as Record<string, unknown>).ollama).toBeUndefined();
   });
 
   it("migrates legacy Azure settings into the current shape", async () => {

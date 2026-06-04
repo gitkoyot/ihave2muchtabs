@@ -1,7 +1,7 @@
 import type { AskAnswerResult, LlmSettings, SummaryResult } from "../types/models";
 import { generateSummary as azureSummary, generateEmbedding as azureEmbedding, answerQuery as azureAnswer, checkChat as azureCheckChat } from "./azureOpenAIClient";
 import { generateSummary as anthropicSummary, answerQuery as anthropicAnswer, checkChat as anthropicCheckChat, listModels as anthropicListModels } from "./anthropicClient";
-import { generateSummary as ollamaSummary, generateEmbedding as ollamaEmbedding, answerQuery as ollamaAnswer, checkChat as ollamaCheckChat, listModels as ollamaListModels } from "./ollamaClient";
+import { generateSummary as localSummary, generateEmbedding as localEmbedding, answerQuery as localAnswer, checkChat as localCheckChat, listModels as localListModels } from "./ollamaClient";
 
 export interface ChatResult {
   result: SummaryResult;
@@ -28,8 +28,8 @@ export function generateSummary(settings: LlmSettings, input: SummaryInput): Pro
       return azureSummary(settings.azure, input);
     case "anthropic":
       return anthropicSummary(settings.anthropic, input);
-    case "ollama":
-      return ollamaSummary(settings.ollama, input);
+    case "local":
+      return localSummary(settings.local, input);
   }
 }
 
@@ -37,8 +37,8 @@ export function generateEmbedding(settings: LlmSettings, input: string): Promise
   switch (settings.embeddingProvider) {
     case "azure_openai":
       return azureEmbedding(settings.azure, input);
-    case "ollama":
-      return ollamaEmbedding(settings.ollama, input);
+    case "local":
+      return localEmbedding(settings.local, input);
   }
 }
 
@@ -52,8 +52,8 @@ export async function listModels(settings: LlmSettings): Promise<{ chat: string[
       case "anthropic":
         chat = await anthropicListModels(settings.anthropic);
         break;
-      case "ollama":
-        chat = await ollamaListModels(settings.ollama);
+      case "local":
+        chat = await localListModels(settings.local);
         break;
     }
   } catch (e) {
@@ -66,8 +66,8 @@ export async function listModels(settings: LlmSettings): Promise<{ chat: string[
       case "azure_openai":
         embedding = ["(Azure: check your deployments in the Azure portal)"];
         break;
-      case "ollama":
-        embedding = await ollamaListModels(settings.ollama);
+      case "local":
+        embedding = await localListModels(settings.local);
         break;
     }
   } catch (e) {
@@ -83,7 +83,7 @@ export async function checkConnection(settings: LlmSettings): Promise<{ chat: st
     switch (settings.provider) {
       case "azure_openai": await azureCheckChat(settings.azure); break;
       case "anthropic": await anthropicCheckChat(settings.anthropic); break;
-      case "ollama": await ollamaCheckChat(settings.ollama); break;
+      case "local": await localCheckChat(settings.local); break;
     }
     chat = "ok";
   } catch (e) {
@@ -111,7 +111,7 @@ export function answerQuery(
       return azureAnswer(settings.azure, question, retrievedRecordsJson);
     case "anthropic":
       return anthropicAnswer(settings.anthropic, question, retrievedRecordsJson);
-    case "ollama":
-      return ollamaAnswer(settings.ollama, question, retrievedRecordsJson);
+    case "local":
+      return localAnswer(settings.local, question, retrievedRecordsJson);
   }
 }

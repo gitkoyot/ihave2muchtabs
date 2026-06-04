@@ -45,6 +45,7 @@ export interface PageAnalysis {
   promptVersion: string;
   tokenUsageIn: number | null;
   tokenUsageOut: number | null;
+  generationMs: number | null;
   analysisVersion: number;
   createdAt: number;
 }
@@ -65,8 +66,8 @@ export interface PageLink {
   createdAt: number;
 }
 
-export type LlmProviderType = "azure_openai" | "anthropic" | "ollama";
-export type EmbeddingProviderType = "azure_openai" | "ollama";
+export type LlmProviderType = "azure_openai" | "anthropic" | "local";
+export type EmbeddingProviderType = "azure_openai" | "local";
 
 export interface AzureOpenAISettings {
   endpoint: string;
@@ -81,7 +82,7 @@ export interface AnthropicSettings {
   model: string;
 }
 
-export interface OllamaSettings {
+export interface LocalModelSettings {
   endpoint: string;
   chatModel: string;
   embeddingModel: string;
@@ -92,7 +93,7 @@ export interface LlmSettings {
   embeddingProvider: EmbeddingProviderType;
   azure: AzureOpenAISettings;
   anthropic: AnthropicSettings;
-  ollama: OllamaSettings;
+  local: LocalModelSettings;
   maxCharsPerPage: number;
   maxConcurrency: number;
 }
@@ -131,12 +132,11 @@ export interface CostMetrics {
     analyzedPages: number;
     tokenIn: number;
     tokenOut: number;
-    estimatedUsd: number;
+    tokensPerSecond: number;
   };
   query: {
     count: number;
     tokenIn: number;
     tokenOut: number;
-    estimatedUsd: number;
   };
 }

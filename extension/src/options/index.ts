@@ -31,10 +31,10 @@ function readForm(): LlmSettings {
       apiKey: byId<HTMLInputElement>("anthropicApiKey").value.trim(),
       model: byId<HTMLSelectElement>("anthropicModel").value
     },
-    ollama: {
-      endpoint: byId<HTMLInputElement>("ollamaEndpoint").value.trim() || DEFAULT_SETTINGS.ollama.endpoint,
-      chatModel: byId<HTMLInputElement>("ollamaChatModel").value.trim(),
-      embeddingModel: byId<HTMLInputElement>("ollamaEmbeddingModel").value.trim()
+    local: {
+      endpoint: byId<HTMLInputElement>("localEndpoint").value.trim() || DEFAULT_SETTINGS.local.endpoint,
+      chatModel: byId<HTMLInputElement>("localChatModel").value.trim(),
+      embeddingModel: byId<HTMLInputElement>("localEmbeddingModel").value.trim()
     },
     maxCharsPerPage: Number(byId<HTMLInputElement>("maxCharsPerPage").value || DEFAULT_SETTINGS.maxCharsPerPage),
     maxConcurrency: Number(byId<HTMLInputElement>("maxConcurrency").value || DEFAULT_SETTINGS.maxConcurrency)
@@ -54,9 +54,9 @@ function writeForm(settings: LlmSettings): void {
   byId<HTMLInputElement>("anthropicApiKey").value = settings.anthropic.apiKey;
   byId<HTMLSelectElement>("anthropicModel").value = settings.anthropic.model;
 
-  byId<HTMLInputElement>("ollamaEndpoint").value = settings.ollama.endpoint;
-  byId<HTMLInputElement>("ollamaChatModel").value = settings.ollama.chatModel;
-  byId<HTMLInputElement>("ollamaEmbeddingModel").value = settings.ollama.embeddingModel;
+  byId<HTMLInputElement>("localEndpoint").value = settings.local.endpoint;
+  byId<HTMLInputElement>("localChatModel").value = settings.local.chatModel;
+  byId<HTMLInputElement>("localEmbeddingModel").value = settings.local.embeddingModel;
 
   byId<HTMLInputElement>("maxCharsPerPage").value = String(settings.maxCharsPerPage);
   byId<HTMLInputElement>("maxConcurrency").value = String(settings.maxConcurrency);
@@ -67,7 +67,7 @@ function setupTabs(): void {
   const sections: Record<string, HTMLElement> = {
     azure: byId("sectionAzure"),
     anthropic: byId("sectionAnthropic"),
-    ollama: byId("sectionOllama")
+    local: byId("sectionLocal")
   };
 
   for (const tab of tabs) {

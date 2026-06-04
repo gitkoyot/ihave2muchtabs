@@ -10,6 +10,8 @@ function byId<T extends HTMLElement>(id: string): T {
   return el as T;
 }
 
+let lastRowsSignature = "";
+
 function escapeHtml(input: string): string {
   return input
     .replaceAll("&", "&amp;")
@@ -21,7 +23,6 @@ function escapeHtml(input: string): string {
 async function renderRows(): Promise<void> {
   const rowsEl = byId<HTMLTableSectionElement>("rows");
   const statsLine = byId<HTMLParagraphElement>("statsLine");
-  rowsEl.innerHTML = "";
 
   const rows = await listKnowledgeRows();
   const done = rows.filter((r) => r.tab.processingStatus === "done").length;
@@ -30,6 +31,18 @@ async function renderRows(): Promise<void> {
   const pending = rows.filter((r) => r.tab.processingStatus === "pending").length;
   statsLine.textContent = `Total: ${rows.length} | Done: ${done} | Processing: ${processing} | Pending: ${pending} | Failed: ${failed}`;
 
+  // Skip rebuilding the table when nothing changed, so the periodic refresh
+  // does not flicker or reset the scroll position.
+  const signature = rows
+    .slice(0, 100)
+    .map((r) => `${r.tab.id}:${r.tab.processingStatus}:${r.tab.updatedAt}`)
+    .join("|");
+  if (signature === lastRowsSignature) {
+    return;
+  }
+  lastRowsSignature = signature;
+
+  const frag = document.createDocumentFragment();
   for (const row of rows.slice(0, 100)) {
     const tr = document.createElement("tr");
     const diagnostics = [
@@ -58,8 +71,9 @@ async function renderRows(): Promise<void> {
       <td><pre style="margin:0; white-space:pre-wrap;">${escapeHtml(diagnostics)}</pre></td>
       <td><button data-url="${encodeURIComponent(row.tab.url)}">Open</button></td>
     `;
-    rowsEl.appendChild(tr);
+    frag.appendChild(tr);
   }
+  rowsEl.replaceChildren(frag);
 
   rowsEl.querySelectorAll<HTMLButtonElement>("button[data-url]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -100,10 +114,9 @@ async function renderCostMetrics(): Promise<void> {
   }
   const { scan, query } = response.payload;
   panel.textContent = [
-    "Token Cost Panel (estimated)",
-    `Scan -> pages: ${scan.analyzedPages}, input: ${scan.tokenIn}, output: ${scan.tokenOut}, est. USD: $${scan.estimatedUsd.toFixed(4)}`,
-    `Query -> count: ${query.count}, input: ${query.tokenIn}, output: ${query.tokenOut}, est. USD: $${query.estimatedUsd.toFixed(4)}`,
-    "Note: this is an estimate. Azure billing depends on actual deployment pricing."
+    "Token usage",
+    `Scan -> pages: ${scan.analyzedPages}, input: ${scan.tokenIn}, output: ${scan.tokenOut}, speed: ${scan.tokensPerSecond} tok/s`,
+    `Query -> count: ${query.count}, input: ${query.tokenIn}, output: ${query.tokenOut}`
   ].join("\n");
 }
 

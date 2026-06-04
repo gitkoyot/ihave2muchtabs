@@ -1,4 +1,8 @@
-import type { AskAnswerResult, OllamaSettings, SummaryResult } from "../types/models";
+// Generic local-model client using the OpenAI-compatible API surface
+// (/v1/chat/completions, /v1/embeddings, /v1/models).
+// Works with any local server that speaks the OpenAI protocol, including
+// Ollama (via its /v1 compatibility layer) and LM Studio.
+import type { AskAnswerResult, LocalModelSettings, SummaryResult } from "../types/models";
 import { api } from "../utils/browser-api";
 import {
   ANSWER_SYSTEM_PROMPT,
@@ -8,59 +12,42 @@ import {
 } from "./prompts";
 import { parseAskAnswerResultJson, parseSummaryResultJson } from "./validators";
 
-interface OllamaChatResponse {
-  message?: { content?: string };
-  prompt_eval_count?: number;
-  eval_count?: number;
+interface OpenAIChatResponse {
+  choices?: Array<{ message?: { content?: string } }>;
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
 }
 
-interface OllamaEmbeddingsResponse {
-  embeddings?: number[][];
+interface OpenAIEmbeddingsResponse {
+  data?: Array<{ embedding?: number[] }>;
 }
 
-interface OllamaTagsResponse {
-  models?: Array<{ name: string }>;
+interface OpenAIModelsResponse {
+  data?: Array<{ id: string }>;
 }
 
 function normalizeEndpoint(endpoint: string): string {
-  return endpoint.replace(/\/+$/, "");
+  // Strip trailing slashes and a trailing /v1 so we can append it consistently.
+  return endpoint.replace(/\/+$/, "").replace(/\/v1$/, "");
 }
 
-function chatUrl(settings: OllamaSettings): string {
-  return `${normalizeEndpoint(settings.endpoint)}/api/chat`;
+function chatUrl(settings: LocalModelSettings): string {
+  return `${normalizeEndpoint(settings.endpoint)}/v1/chat/completions`;
 }
 
-function embeddingsUrl(settings: OllamaSettings): string {
-  return `${normalizeEndpoint(settings.endpoint)}/api/embed`;
+function embeddingsUrl(settings: LocalModelSettings): string {
+  return `${normalizeEndpoint(settings.endpoint)}/v1/embeddings`;
+}
+
+function modelsUrl(endpoint: string): string {
+  return `${normalizeEndpoint(endpoint)}/v1/models`;
 }
 
 function extractJson(text: string): string {
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    throw new Error("No JSON object found in Ollama response");
+    throw new Error("No JSON object found in local model response");
   }
   return jsonMatch[0];
-}
-
-async function fetchAvailableModels(endpoint: string): Promise<string> {
-  try {
-    const res = await fetch(`${normalizeEndpoint(endpoint)}/api/tags`);
-    if (!res.ok) return "(failed to fetch model list)";
-    const data = (await res.json()) as OllamaTagsResponse;
-    const names = data.models?.map((m) => m.name) ?? [];
-    return names.length > 0 ? names.join(", ") : "(no installed models found)";
-  } catch {
-    return "(failed to fetch model list)";
-  }
-}
-
-async function ollama404Error(endpoint: string, requestedModel: string): Promise<Error> {
-  const available = await fetchAvailableModels(endpoint);
-  return new Error(
-    `Model "${requestedModel}" was not found in Ollama.\n` +
-    `Available models: ${available}\n` +
-    `Install it with: ollama pull ${requestedModel}`
-  );
 }
 
 function getExtensionOriginPattern(): string {
@@ -71,84 +58,109 @@ function getExtensionOriginPattern(): string {
   return "chrome-extension://*";
 }
 
-function ollamaForbiddenError(): Error {
+function forbiddenError(): Error {
   const originPattern = getExtensionOriginPattern();
   return new Error(
-    "403 Forbidden - Ollama is blocking requests from this extension.\n" +
-    `Allow the current browser extension origin and restart Ollama:\n` +
-    `$env:OLLAMA_ORIGINS="${originPattern}"; ollama serve`
+    "403 Forbidden - the local model server is blocking requests from this extension (CORS).\n" +
+    "For Ollama, allow the extension origin and restart it:\n" +
+    `  $env:OLLAMA_ORIGINS="${originPattern}"; ollama serve\n` +
+    "For LM Studio, enable CORS in the Developer / Local Server settings."
   );
 }
 
-export async function listModels(settings: OllamaSettings): Promise<string[]> {
-  const res = await fetch(`${normalizeEndpoint(settings.endpoint)}/api/tags`);
-  if (res.status === 403) throw ollamaForbiddenError();
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Ollama /api/tags failed: ${res.status} ${text}`);
+async function fetchAvailableModels(endpoint: string): Promise<string> {
+  try {
+    const res = await fetch(modelsUrl(endpoint));
+    if (!res.ok) return "(failed to fetch model list)";
+    const data = (await res.json()) as OpenAIModelsResponse;
+    const names = data.data?.map((m) => m.id) ?? [];
+    return names.length > 0 ? names.join(", ") : "(no models loaded)";
+  } catch {
+    return "(failed to fetch model list)";
   }
-  const data = (await res.json()) as OllamaTagsResponse;
-  return data.models?.map((m) => m.name) ?? [];
 }
 
-export async function checkChat(settings: OllamaSettings): Promise<void> {
-  const response = await fetch(chatUrl(settings), {
+async function modelNotFoundError(endpoint: string, requestedModel: string): Promise<Error> {
+  const available = await fetchAvailableModels(endpoint);
+  return new Error(
+    `Model "${requestedModel}" was not found on the local server.\n` +
+    `Available models: ${available}\n` +
+    `For Ollama: ollama pull ${requestedModel}. For LM Studio: load the model in the app.`
+  );
+}
+
+async function postChat(
+  settings: LocalModelSettings,
+  messages: Array<{ role: string; content: string }>,
+  opts?: { jsonMode?: boolean; maxTokens?: number }
+): Promise<Response> {
+  const body: Record<string, unknown> = {
+    model: settings.chatModel,
+    messages,
+    stream: false,
+    temperature: 0
+  };
+  if (opts?.jsonMode) body.response_format = { type: "json_object" };
+  if (typeof opts?.maxTokens === "number") body.max_tokens = opts.maxTokens;
+
+  return await fetch(chatUrl(settings), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: settings.chatModel,
-      messages: [{ role: "user", content: "Hi" }],
-      stream: false,
-      options: { num_predict: 1 }
-    })
+    body: JSON.stringify(body)
   });
-  if (response.status === 403) throw ollamaForbiddenError();
-  if (response.status === 404) throw await ollama404Error(settings.endpoint, settings.chatModel);
+}
+
+export async function listModels(settings: LocalModelSettings): Promise<string[]> {
+  const res = await fetch(modelsUrl(settings.endpoint));
+  if (res.status === 403) throw forbiddenError();
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Local model /v1/models failed: ${res.status} ${text}`);
+  }
+  const data = (await res.json()) as OpenAIModelsResponse;
+  return data.data?.map((m) => m.id) ?? [];
+}
+
+export async function checkChat(settings: LocalModelSettings): Promise<void> {
+  const response = await postChat(settings, [{ role: "user", content: "Hi" }], { maxTokens: 1 });
+  if (response.status === 403) throw forbiddenError();
+  if (response.status === 404) throw await modelNotFoundError(settings.endpoint, settings.chatModel);
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
-    throw new Error(`Ollama chat check failed: ${response.status} ${errorText}`);
+    throw new Error(`Local model chat check failed: ${response.status} ${errorText}`);
   }
 }
 
 export async function generateSummary(
-  settings: OllamaSettings,
+  settings: LocalModelSettings,
   input: { bookmarkTitle: string; url: string; pageTitle: string; contentText: string }
 ): Promise<{ result: SummaryResult; tokenUsageIn: number | null; tokenUsageOut: number | null }> {
-  const response = await fetch(chatUrl(settings), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: settings.chatModel,
-      messages: [
-        { role: "system", content: SUMMARY_SYSTEM_PROMPT + " Return strict JSON only." },
-        { role: "user", content: buildSummaryUserPrompt(input) }
-      ],
-      stream: false,
-      format: "json"
-    })
-  });
+  const response = await postChat(settings, [
+    { role: "system", content: SUMMARY_SYSTEM_PROMPT + " Return strict JSON only." },
+    { role: "user", content: buildSummaryUserPrompt(input) }
+  ], { jsonMode: true });
 
-  if (response.status === 403) throw ollamaForbiddenError();
-  if (response.status === 404) throw await ollama404Error(settings.endpoint, settings.chatModel);
+  if (response.status === 403) throw forbiddenError();
+  if (response.status === 404) throw await modelNotFoundError(settings.endpoint, settings.chatModel);
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
-    throw new Error(`Ollama chat summary failed: ${response.status} ${errorText}`);
+    throw new Error(`Local model chat summary failed: ${response.status} ${errorText}`);
   }
 
-  const data = (await response.json()) as OllamaChatResponse;
-  const content = data.message?.content;
+  const data = (await response.json()) as OpenAIChatResponse;
+  const content = data.choices?.[0]?.message?.content;
   if (!content) {
-    throw new Error("Ollama chat summary missing content");
+    throw new Error("Local model chat summary missing content");
   }
 
   return {
     result: parseSummaryResultJson(extractJson(content)),
-    tokenUsageIn: data.prompt_eval_count ?? null,
-    tokenUsageOut: data.eval_count ?? null
+    tokenUsageIn: data.usage?.prompt_tokens ?? null,
+    tokenUsageOut: data.usage?.completion_tokens ?? null
   };
 }
 
-export async function generateEmbedding(settings: OllamaSettings, input: string): Promise<number[]> {
+export async function generateEmbedding(settings: LocalModelSettings, input: string): Promise<number[]> {
   const response = await fetch(embeddingsUrl(settings), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -158,56 +170,47 @@ export async function generateEmbedding(settings: OllamaSettings, input: string)
     })
   });
 
-  if (response.status === 403) throw ollamaForbiddenError();
-  if (response.status === 404) throw await ollama404Error(settings.endpoint, settings.embeddingModel);
+  if (response.status === 403) throw forbiddenError();
+  if (response.status === 404) throw await modelNotFoundError(settings.endpoint, settings.embeddingModel);
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
-    throw new Error(`Ollama embeddings failed: ${response.status} ${errorText}`);
+    throw new Error(`Local model embeddings failed: ${response.status} ${errorText}`);
   }
 
-  const data = (await response.json()) as OllamaEmbeddingsResponse;
-  const embedding = data.embeddings?.[0];
+  const data = (await response.json()) as OpenAIEmbeddingsResponse;
+  const embedding = data.data?.[0]?.embedding;
   if (!embedding) {
-    throw new Error("Ollama embeddings response missing vector");
+    throw new Error("Local model embeddings response missing vector");
   }
   return embedding;
 }
 
 export async function answerQuery(
-  settings: OllamaSettings,
+  settings: LocalModelSettings,
   question: string,
   retrievedRecordsJson: string
 ): Promise<{ result: AskAnswerResult; tokenUsageIn: number | null; tokenUsageOut: number | null }> {
-  const response = await fetch(chatUrl(settings), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: settings.chatModel,
-      messages: [
-        { role: "system", content: ANSWER_SYSTEM_PROMPT + " Return strict JSON only." },
-        { role: "user", content: buildAnswerUserPrompt(question, retrievedRecordsJson) }
-      ],
-      stream: false,
-      format: "json"
-    })
-  });
+  const response = await postChat(settings, [
+    { role: "system", content: ANSWER_SYSTEM_PROMPT + " Return strict JSON only." },
+    { role: "user", content: buildAnswerUserPrompt(question, retrievedRecordsJson) }
+  ], { jsonMode: true });
 
-  if (response.status === 403) throw ollamaForbiddenError();
-  if (response.status === 404) throw await ollama404Error(settings.endpoint, settings.chatModel);
+  if (response.status === 403) throw forbiddenError();
+  if (response.status === 404) throw await modelNotFoundError(settings.endpoint, settings.chatModel);
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
-    throw new Error(`Ollama answer failed: ${response.status} ${errorText}`);
+    throw new Error(`Local model answer failed: ${response.status} ${errorText}`);
   }
 
-  const data = (await response.json()) as OllamaChatResponse;
-  const content = data.message?.content;
+  const data = (await response.json()) as OpenAIChatResponse;
+  const content = data.choices?.[0]?.message?.content;
   if (!content) {
-    throw new Error("Ollama answer missing content");
+    throw new Error("Local model answer missing content");
   }
 
   return {
     result: parseAskAnswerResultJson(extractJson(content)),
-    tokenUsageIn: data.prompt_eval_count ?? null,
-    tokenUsageOut: data.eval_count ?? null
+    tokenUsageIn: data.usage?.prompt_tokens ?? null,
+    tokenUsageOut: data.usage?.completion_tokens ?? null
   };
 }
