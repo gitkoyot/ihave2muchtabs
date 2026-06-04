@@ -145,4 +145,13 @@ npx vitest --coverage                 # with coverage (v8 provider)
 
 ### UI Style
 
-All pages (popup, options, dashboard) use a consistent dark theme with CSS custom propertie
+All pages (popup, options, dashboard) use a consistent dark theme with CSS custom properties (`--bg`, `--surface`, `--border`, `--accent`, etc.). When modifying or adding UI, match the existing dark palette. Version placeholder `__EXTENSION_VERSION__` in HTML is replaced at build time.
+
+### Entry Points (esbuild)
+
+| Entry | HTML | Purpose |
+|-------|------|---------|
+| `src/background/service-worker.ts` | — | Background orchestrator |
+| `src/popup/index.ts` | `popup.html` | Quick scan & Q&A |
+| `src/options/index.ts` | `options.html` | Provider settings with tabbed UI |
+| `src/dashboard/index.ts` | `dashboard.html` | Analytics, logs, cost, export |
