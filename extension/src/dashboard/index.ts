@@ -1,5 +1,6 @@
 import { listKnowledgeRows } from "../storage/repository";
 import { sendRuntimeMessage } from "../utils/runtime";
+import { api } from "../utils/browser-api";
 
 function byId<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -107,6 +108,13 @@ async function renderCostMetrics(): Promise<void> {
 }
 
 function initDashboard(): void {
+  byId<HTMLButtonElement>("settingsBtn").addEventListener("click", () => {
+    if (api.runtime.openOptionsPage) {
+      void api.runtime.openOptionsPage();
+    } else {
+      window.open(api.runtime.getURL("options.html"), "_blank");
+    }
+  });
   byId<HTMLButtonElement>("refreshBtn").addEventListener("click", () => void renderRows());
   byId<HTMLButtonElement>("exportBtn").addEventListener("click", async () => {
     const statsLine = byId<HTMLParagraphElement>("statsLine");

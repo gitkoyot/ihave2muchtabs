@@ -36,7 +36,7 @@
       h1 { font-size: 22px; font-weight: 700; margin-bottom: 14px; }
       .toolbar {
         display: grid;
-        grid-template-columns: 1.2fr repeat(6, auto);
+        grid-template-columns: 1.2fr repeat(7, auto);
         gap: 8px;
         align-items: center;
       }
@@ -142,6 +142,7 @@
         <h1>Knowledge Dashboard</h1>
         <div class="toolbar">
           <input id="searchInput" placeholder="Search by URL, title, tag..." />
+          <button id="settingsBtn">Settings</button>
           <button id="refreshBtn">Refresh</button>
           <button id="exportBtn">Export JSONL</button>
           <button id="exportTxtBtn">Export TXT</button>
@@ -168,6 +169,4 @@
         </div>
       </div>
     </div>
-    <script type="module" src="./dist/dashboard/index.js"></script>
-  </body>
-</html>
+    <script type="module" src="./

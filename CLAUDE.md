@@ -72,6 +72,8 @@ Status lifecycle per tab: `pending → processing → done | failed | restricted
 
 HTTP 401/403 responses produce `"restricted"` status (not a user error). Empty extracted text produces `"failed"`.
 
+`CLOSE_ANALYZED_TABS` (`handleCloseAnalyzedTabs`) closes open http/https tabs whose URL matches a record with `processingStatus === "done"`, scoped to `all_tabs` or `current_window` (the active tab is kept when scoping to the current window). `CLEAR_DATABASE` wipes all IndexedDB stores. `GET_STATS` and `GET_COST_METRICS` aggregate counts and token spend for the dashboard.
+
 ### Multi-Provider LLM Abstraction
 
 `src/llm/llmProvider.ts` routes calls based on `settings.provider` and `settings.embeddingProvider`:
@@ -113,7 +115,7 @@ Debug logs are stored in `chrome.storage.local` under `debug_logs` (300-entry ci
 ### Semantic Search Flow (ASK_QUERY)
 
 1. Embed the question via the configured embedding provider
-2. `rankAnalysesBySimilarity()` scores all analyzed pages by cosine similarity (`src/search/vector.ts`)
+2. `rankAnalysesBySimilarity()` (`src/search/retrieval.ts`) scores all analyzed pages, drops negatives, sorts, and returns the top K (default 8). It delegates the math to `cosineSimilarity()` in `src/search/vector.ts` (which returns `-1` for empty, mismatched, zero-norm, or non-finite vectors).
 3. Top 8 results passed as context to the chat provider
 4. Response includes answer, matched_urls, related_urls, confidence
 
@@ -143,13 +145,4 @@ npx vitest --coverage                 # with coverage (v8 provider)
 
 ### UI Style
 
-All pages (popup, options, dashboard) use a consistent dark theme with CSS custom properties (`--bg`, `--surface`, `--border`, `--accent`, etc.). When modifying or adding UI, match the existing dark palette. Version placeholder `__EXTENSION_VERSION__` in HTML is replaced at build time.
-
-### Entry Points (esbuild)
-
-| Entry | HTML | Purpose |
-|-------|------|---------|
-| `src/background/service-worker.ts` | — | Background orchestrator |
-| `src/popup/index.ts` | `popup.html` | Quick scan & Q&A |
-| `src/options/index.ts` | `options.html` | Provider settings with tabbed UI |
-| `src/dashboard/index.ts` | `dashboard.html` | Analytics, logs, cost, export |
+All pages (popup, options, dashboard) use a consistent dark theme with CSS custom propertie
